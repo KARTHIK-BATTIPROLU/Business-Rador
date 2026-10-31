@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Business, OutreachStatus } from '@/lib/types';
 import { BusinessCard } from './BusinessCard';
 import { ArrowUpDown, RefreshCw } from 'lucide-react';
@@ -21,6 +21,13 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
   isLoading,
 }) => {
   const [sortBy, setSortBy] = useState<'score' | 'newest' | 'name'>('score');
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (selectedId && cardRefs.current[selectedId]) {
+      cardRefs.current[selectedId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selectedId]);
 
   const sorted = [...businesses].sort((a, b) => {
     if (sortBy === 'score') return b.lead_score - a.lead_score;
@@ -79,13 +86,19 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
           </div>
         ) : (
           sorted.map((b) => (
-            <BusinessCard
+            <div
               key={b.id}
-              business={b}
-              isSelected={b.id === selectedId}
-              onSelect={() => onSelectBusiness(b)}
-              onStatusChange={(status, notes) => onStatusChange(b.id, status, notes)}
-            />
+              ref={(el) => {
+                cardRefs.current[b.id] = el;
+              }}
+            >
+              <BusinessCard
+                business={b}
+                isSelected={b.id === selectedId}
+                onSelect={() => onSelectBusiness(b)}
+                onStatusChange={(status, notes) => onStatusChange(b.id, status, notes)}
+              />
+            </div>
           ))
         )}
       </div>

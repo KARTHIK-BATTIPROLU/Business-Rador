@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Business, OutreachStatus } from '@/lib/types';
 import {
   Phone,
@@ -13,7 +14,8 @@ import {
   Rocket,
   Calendar,
   Radio,
-  Camera
+  Camera,
+  ArrowRight
 } from 'lucide-react';
 
 interface BusinessCardProps {
@@ -327,6 +329,23 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Primary Link: Full Details & Photos Dossier */}
+      <Link
+        href={`/business/${business.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-3 flex items-center justify-between px-3 py-2 rounded-clay-sm bg-blue-50 hover:bg-accent-blue text-accent-blue hover:text-white border border-blue-200/80 hover:border-transparent font-bold text-xs shadow-clay-btn transition active:translate-y-0.5 group"
+      >
+        <span className="flex items-center gap-1.5">
+          <span>See More Details & Photos</span>
+          {business.dossier?.google_photos?.length ? (
+            <span className="text-[10px] opacity-80 font-normal">
+              ({business.dossier.google_photos.length + (business.dossier.instagram_posts?.length || 0)} photos)
+            </span>
+          ) : null}
+        </span>
+        <ArrowRight className="w-3.5 h-3.5 transition transform group-hover:translate-x-0.5" />
+      </Link>
     </div>
   );
 };

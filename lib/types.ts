@@ -11,6 +11,33 @@ export type BusinessCategory =
   | 'Tech'
   | 'Other';
 
+export interface MediaPhoto {
+  id: string;
+  source: 'google' | 'instagram' | 'storefront';
+  url: string;
+  thumbnail_url?: string;
+  caption: string;
+  type?: 'facade' | 'interior' | 'product' | 'story' | 'post';
+  likes?: number;
+  comments?: number;
+  posted_at?: string;
+}
+
+export interface BusinessDossier {
+  verified_address?: string;
+  hours?: string;
+  price_tier?: string;
+  google_rating?: number;
+  google_reviews_count?: number;
+  instagram_bio?: string;
+  growth_opportunities?: string[];
+  suggested_pitch?: string;
+  whatsapp_pitch?: string;
+  cold_call_script?: string;
+  google_photos?: MediaPhoto[];
+  instagram_posts?: MediaPhoto[];
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -43,6 +70,7 @@ export interface Business {
   outreach_status: OutreachStatus;
   outreach_notes?: string | null;
   contacted_at?: string | null;
+  dossier?: BusinessDossier;
 }
 
 export interface RadarFilterState {

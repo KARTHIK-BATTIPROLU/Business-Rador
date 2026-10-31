@@ -32,6 +32,54 @@ export const AREA_COORDINATES: Record<string, [number, number]> = {
   Narsingi: [78.3588, 17.3883],
 };
 
+function createPopupHTML(b: Business): string {
+  const launchBadge = b.is_opening_soon
+    ? '<span style="display:inline-block;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #c7d2fe;">✨ OPENING SOON</span>'
+    : b.actual_launch_date
+    ? `<span style="display:inline-block;background:#ecfdf5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #a7f3d0;">🚀 Launched ${b.actual_launch_date}</span>`
+    : '';
+
+  const waLink = b.whatsapp
+    ? `<a href="https://wa.me/${b.whatsapp}?text=Hi%20${encodeURIComponent(b.name)},%20congratulations%20on%20your%20new%20launch%20in%20${encodeURIComponent(b.area)}!" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">💬 WhatsApp</a>`
+    : '';
+
+  const callLink = b.phone
+    ? `<a href="tel:${b.phone}" style="flex:1;text-align:center;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📞 Call</a>`
+    : '';
+
+  const igLink = b.instagram_handle
+    ? `<a href="${b.instagram_url || `https://instagram.com/${b.instagram_handle}`}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 @${b.instagram_handle}</a>`
+    : '';
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px; min-width: 240px; max-width: 290px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:5px;">
+        <h4 style="margin:0; font-size:14px; font-weight:700; color:#0f172a; line-height:1.25;">${b.name}</h4>
+        <span style="background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:11px; padding:2px 6px; border-radius:6px; border:1px solid #bfdbfe; white-space:nowrap;">🔥 ${b.lead_score}</span>
+      </div>
+      <div style="font-size:11px; color:#64748b; margin-bottom:6px; display:flex; gap:6px; align-items:center;">
+        <span>📍 <strong>${b.area}</strong></span>
+        <span>•</span>
+        <span>${b.category}</span>
+      </div>
+      <div style="margin-bottom:8px;">
+        ${launchBadge}
+      </div>
+      <p style="font-size:11px; color:#475569; margin:0 0 10px 0; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+        ${b.description || 'Newly discovered business in Hyderabad.'}
+      </p>
+      <div style="display:flex; gap:5px; margin-bottom:8px;">
+        ${waLink}
+        ${igLink || callLink}
+      </div>
+      <a href="/business/${b.id}" style="display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; background:#2563eb; color:#ffffff; padding:7px 10px; border-radius:7px; font-size:12px; font-weight:700; text-decoration:none; box-shadow:0 2px 4px rgba(37,99,235,0.25);">
+        <span>See More Details & Photos</span>
+        <span>→</span>
+      </a>
+    </div>
+  `;
+}
+
 export const RadarMap: React.FC<RadarMapProps> = ({
   businesses,
   selectedBusiness,
@@ -40,6 +88,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
+  const businessesRef = useRef<Business[]>(businesses);
+  businessesRef.current = businesses;
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   const [currentStyle, setCurrentStyle] = useState<'positron' | 'voyager' | 'dark'>('positron');
 
   const toGeoJSON = (items: Business[]): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
@@ -179,9 +230,27 @@ export const RadarMap: React.FC<RadarMapProps> = ({
         const feature = e.features?.[0];
         if (!feature) return;
         const bizId = feature.properties?.id;
-        const target = businesses.find((b) => b.id === bizId);
+        const target = businessesRef.current.find((b) => b.id === bizId);
         if (target) {
           onSelectBusiness(target);
+
+          if (popupRef.current) {
+            popupRef.current.remove();
+          }
+
+          const coords = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+          const popup = new maplibregl.Popup({
+            offset: 14,
+            closeButton: true,
+            closeOnClick: false,
+            className: 'radar-map-popup',
+            maxWidth: '320px',
+          })
+            .setLngLat(coords)
+            .setHTML(createPopupHTML(target))
+            .addTo(map);
+
+          popupRef.current = popup;
         }
       });
 
@@ -222,11 +291,29 @@ export const RadarMap: React.FC<RadarMapProps> = ({
 
   useEffect(() => {
     if (!mapInstance.current || !selectedBusiness?.lat || !selectedBusiness?.lng) return;
-    mapInstance.current.flyTo({
+    const map = mapInstance.current;
+    map.flyTo({
       center: [selectedBusiness.lng, selectedBusiness.lat],
       zoom: 15.5,
       speed: 1.4,
     });
+
+    if (popupRef.current) {
+      popupRef.current.remove();
+    }
+
+    const popup = new maplibregl.Popup({
+      offset: 14,
+      closeButton: true,
+      closeOnClick: false,
+      className: 'radar-map-popup',
+      maxWidth: '320px',
+    })
+      .setLngLat([selectedBusiness.lng, selectedBusiness.lat])
+      .setHTML(createPopupHTML(selectedBusiness))
+      .addTo(map);
+
+    popupRef.current = popup;
   }, [selectedBusiness]);
 
   const handleStyleChange = (styleKey: 'positron' | 'voyager' | 'dark') => {

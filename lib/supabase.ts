@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { INITIAL_BUSINESSES } from './mock-data';
 import { Business, RadarFilterState } from './types';
+import { enrichBusinessWithMedia } from './media-helpers';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey =
@@ -44,7 +45,8 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
 
       const { data, error } = await query.order('first_seen_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return filterByRecency(data as Business[], filters.recency);
+        const enriched = (data as Business[]).map((b) => enrichBusinessWithMedia(b));
+        return filterByRecency(enriched, filters.recency);
       }
     } catch (e) {
       console.warn('Falling back to local cache due to Supabase error:', e);
@@ -52,7 +54,7 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
   }
 
   // Fallback to local memory store
-  let res = [...localBusinesses];
+  let res = localBusinesses.map((b) => enrichBusinessWithMedia(b));
 
   if (filters.area && filters.area !== 'all') {
     res = res.filter((b) => b.area.toLowerCase().includes(filters.area.toLowerCase()));
@@ -150,4 +152,23 @@ export async function updateBusinessOutreach(
   });
 
   return true;
+}
+
+export async function fetchBusinessById(id: string): Promise<Business | null> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('businesses').select('*').eq('id', id).single();
+      if (!error && data) {
+        return enrichBusinessWithMedia(data as Business);
+      }
+    } catch (e) {
+      console.warn('Error fetching business by id from Supabase, checking local:', e);
+    }
+  }
+
+  const found = localBusinesses.find((b) => b.id === id);
+  if (found) {
+    return enrichBusinessWithMedia(found);
+  }
+  return null;
 }
