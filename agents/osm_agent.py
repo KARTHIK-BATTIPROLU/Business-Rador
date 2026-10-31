@@ -93,6 +93,7 @@ def parse_osm_element(el: dict, area_name: str) -> dict | None:
     shop = tags.get("shop", "")
     category_key = amenity or shop
     category = OSM_CATEGORY_MAP.get(category_key, "Other")
+    start_date = tags.get("start_date") or tags.get("opening_date")
 
     return {
         "name": name,
@@ -104,6 +105,8 @@ def parse_osm_element(el: dict, area_name: str) -> dict | None:
         "category": category,
         "phone": tags.get("phone") or tags.get("contact:phone"),
         "website": tags.get("website") or tags.get("contact:website"),
+        "actual_launch_date": start_date,
+        "launch_source": "osm_tag" if start_date else None,
         "source": "osm",
         "raw_data": tags,
     }

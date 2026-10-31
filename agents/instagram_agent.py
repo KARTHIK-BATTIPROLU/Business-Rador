@@ -122,13 +122,31 @@ def run():
                 contacts = extract_contacts_from_bio(bio)
                 area = guess_area(bio)
 
+                is_opening_soon = bool(re.search(r"(opening soon|coming soon|soft launch|doors open soon)", bio, re.IGNORECASE))
+                mediacount = getattr(profile, "mediacount", None)
+                first_post_at = None
+                actual_launch_date = None
+
+                # For early-stage accounts (< 15 posts), fetch earliest post date without hitting rate limits
+                if mediacount is not None and 0 < mediacount <= 15:
+                    try:
+                        posts = list(profile.get_posts())
+                        if posts:
+                            oldest_post = posts[-1]
+                            first_post_at = oldest_post.date_utc.isoformat()
+                            actual_launch_date = oldest_post.date_utc.date().isoformat()
+                    except Exception as ex:
+                        log.debug(f"Could not inspect earliest post for @{owner}: {ex}")
+
                 lead_score = 40
+                if is_opening_soon or (actual_launch_date and "2026" in actual_launch_date):
+                    lead_score += 35 # Fresh launch priority
                 if not profile.external_url:
-                    lead_score += 30  # No website!
+                    lead_score += 25  # No website!
                 if profile.followers < 1000:
-                    lead_score += 20  # Brand new or small
+                    lead_score += 15  # Early profile
                 if contacts["phone"]:
-                    lead_score += 10
+                    lead_score += 5
 
                 category = profile.business_category_name or "Retail"
 
@@ -144,6 +162,11 @@ def run():
                     "instagram_handle": profile.username,
                     "instagram_url": f"https://instagram.com/{profile.username}",
                     "instagram_followers": profile.followers,
+                    "instagram_first_post_at": first_post_at,
+                    "instagram_post_count": mediacount,
+                    "actual_launch_date": actual_launch_date,
+                    "is_opening_soon": is_opening_soon,
+                    "launch_source": "instagram_first_post" if actual_launch_date else ("instagram_bio" if is_opening_soon else None),
                     "source": "instagram",
                     "lead_score": min(lead_score, 100),
                     "description": bio[:280] if bio else None,

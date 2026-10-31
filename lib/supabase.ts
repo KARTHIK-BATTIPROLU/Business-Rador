@@ -75,7 +75,29 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
     );
   }
 
+  res = filterByLaunchAge(res, filters.launch_age);
   return filterByRecency(res, filters.recency);
+}
+
+function filterByLaunchAge(items: Business[], launchAge?: string): Business[] {
+  if (!launchAge || launchAge === 'all') return items;
+  const now = Date.now();
+  const MS_DAY = 24 * 60 * 60 * 1000;
+
+  return items.filter((b) => {
+    if (launchAge === 'opening_soon') {
+      return b.is_opening_soon === true;
+    }
+    const dateStr = b.actual_launch_date || b.estimated_open_date;
+    if (!dateStr) return false;
+    const diffDays = Math.round((now - new Date(dateStr).getTime()) / MS_DAY);
+
+    if (launchAge === '14d') return diffDays >= 0 && diffDays <= 14;
+    if (launchAge === '30d') return diffDays >= 0 && diffDays <= 30;
+    if (launchAge === '90d') return diffDays >= 0 && diffDays <= 90;
+    if (launchAge === 'older') return diffDays > 90;
+    return true;
+  });
 }
 
 function filterByRecency(items: Business[], recency: string): Business[] {

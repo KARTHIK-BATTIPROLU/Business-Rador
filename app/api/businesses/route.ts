@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
     area: searchParams.get('area') || 'all',
     category: searchParams.get('category') || 'all',
     recency: (searchParams.get('recency') as RadarFilterState['recency']) || 'all',
+    launch_age: (searchParams.get('launch_age') as RadarFilterState['launch_age']) || 'all',
     search: searchParams.get('search') || '',
     status: (searchParams.get('status') as RadarFilterState['status']) || 'all',
     source: (searchParams.get('source') as RadarFilterState['source']) || 'all',

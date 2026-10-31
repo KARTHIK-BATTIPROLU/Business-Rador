@@ -16,13 +16,18 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'brewcrafters_kokapet',
     instagram_url: 'https://instagram.com/brewcrafters_kokapet',
     instagram_followers: 340,
+    instagram_first_post_at: '2026-10-22T10:00:00Z',
+    instagram_post_count: 8,
+    actual_launch_date: '2026-10-25', // Launched 6 days ago
+    launch_source: 'instagram_first_post',
+    is_opening_soon: false,
     website: null,
-    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(), // 14 hours ago
+    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(), // Radar spotted 14h ago
     estimated_open_date: '2026-10-25',
     source: 'instagram',
     description: 'Specialty cold brews, matcha lattes, and fruit teas near Kokapet SEZ circle. Launched last weekend.',
-    grok_summary: 'Brand new beverage startup in high-income Kokapet IT belt. No official website yet, reliant on basic Instagram stories. High conversion potential for full website & digital menu.',
-    lead_score: 92,
+    grok_summary: 'Brand new beverage startup in high-income Kokapet IT belt. First IG post was 9 days ago (only 8 posts total). High conversion potential for full website & digital menu.',
+    lead_score: 96,
     outreach_status: 'new'
   },
   {
@@ -39,12 +44,17 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'kokapet_roasters',
     instagram_url: 'https://instagram.com/kokapet_roasters',
     instagram_followers: 185,
+    instagram_first_post_at: '2026-10-20T12:30:00Z',
+    instagram_post_count: 4,
+    actual_launch_date: '2026-10-22', // Launched 9 days ago
+    launch_source: 'google_maps_review',
+    is_opening_soon: false,
     website: null,
-    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // 1.5 days ago
+    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
     source: 'google_maps',
     description: 'Cold pressed juices, smoothies, and filter coffee blends for tech commuters.',
-    grok_summary: 'Freshly pinned on Google Maps with 3 reviews. Prime target for local SEO and WhatsApp business catalog setup.',
-    lead_score: 88,
+    grok_summary: 'First Google review posted 9 days ago. Prime target for local SEO, Google Business profile claiming, and WhatsApp business catalog setup.',
+    lead_score: 91,
     outreach_status: 'new'
   },
   {
@@ -61,12 +71,17 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'sutrasilk_hyd',
     instagram_url: 'https://instagram.com/sutrasilk_hyd',
     instagram_followers: 820,
+    instagram_first_post_at: '2026-10-10T14:15:00Z',
+    instagram_post_count: 19,
+    actual_launch_date: '2026-10-12', // Launched 19 days ago
+    launch_source: 'instagram_first_post',
+    is_opening_soon: false,
     website: null,
-    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
+    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
     source: 'instagram',
     description: 'Handcrafted sarees, designer lehengas, and fusion festive wear in Kokapet One Golden Mile.',
     grok_summary: 'Active Instagram posting with high engagement but zero online checkout or e-commerce catalog. Needs Shopify/WooCommerce store setup.',
-    lead_score: 85,
+    lead_score: 87,
     outreach_status: 'new'
   },
   {
@@ -83,12 +98,17 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'matchaco_gachibowli',
     instagram_url: 'https://instagram.com/matchaco_gachibowli',
     instagram_followers: 460,
+    instagram_first_post_at: '2026-10-27T08:00:00Z',
+    instagram_post_count: 6,
+    actual_launch_date: '2026-10-29', // Launched 2 days ago!
+    launch_source: 'grok_ai',
+    is_opening_soon: false,
     website: null,
-    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6 hours ago
+    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
     source: 'osm',
     description: 'Ceremonial grade Japanese matcha, boba teas, and gluten-free pastries near DLF cybercity.',
-    grok_summary: 'Spotted on OSM and Instagram today. Tech-crowd facing beverage bar with no website or Google My Business optimization.',
-    lead_score: 95,
+    grok_summary: 'Grand opening was Oct 29, 2026. Tech-crowd facing beverage bar with no website or Google My Business optimization.',
+    lead_score: 98,
     outreach_status: 'new'
   },
   {
@@ -105,6 +125,11 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'aurapilates_hyd',
     instagram_url: 'https://instagram.com/aurapilates_hyd',
     instagram_followers: 610,
+    instagram_first_post_at: '2026-09-15T10:00:00Z',
+    instagram_post_count: 38,
+    actual_launch_date: '2026-09-20', // ~40 days ago
+    launch_source: 'google_maps_review',
+    is_opening_soon: false,
     website: 'https://aurapilates.sample',
     first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
     source: 'google_maps',
@@ -128,6 +153,11 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'zuka_kpop_hyd',
     instagram_url: 'https://instagram.com/zuka_kpop_hyd',
     instagram_followers: 1200,
+    instagram_first_post_at: '2026-10-01T15:00:00Z',
+    instagram_post_count: 24,
+    actual_launch_date: '2026-10-05', // ~26 days ago
+    launch_source: 'instagram_first_post',
+    is_opening_soon: false,
     website: null,
     first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
     source: 'instagram',
@@ -150,12 +180,17 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'kavyaorganicbakery',
     instagram_url: 'https://instagram.com/kavyaorganicbakery',
     instagram_followers: 210,
+    instagram_first_post_at: '2026-10-23T09:00:00Z',
+    instagram_post_count: 5,
+    actual_launch_date: '2026-10-24', // Launched 7 days ago
+    launch_source: 'grok_ai',
+    is_opening_soon: false,
     website: null,
     first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
     source: 'google_maps',
     description: 'Sourdough, millet bread, and artisan desserts made fresh daily in Kokapet.',
-    grok_summary: 'New neighborhood bakery opened 1 week ago. Only social media profile exists, no search engine presence.',
-    lead_score: 94,
+    grok_summary: 'New neighborhood bakery opened 1 week ago (Oct 24). Only social media profile exists, no search engine presence.',
+    lead_score: 95,
     outreach_status: 'new'
   },
   {
@@ -172,11 +207,16 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'linenclub_jhills',
     instagram_url: 'https://instagram.com/linenclub_jhills',
     instagram_followers: 1450,
+    instagram_first_post_at: '2025-06-12T10:00:00Z',
+    instagram_post_count: 140,
+    actual_launch_date: '2025-07-01', // Older established business
+    launch_source: 'gstin_reg',
+    is_opening_soon: false,
     website: 'https://linenjhills.in',
     first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45).toISOString(),
     source: 'osm',
     description: 'Pure European linen shirts, suits, and custom bespoke tailoring on Road No. 36.',
-    grok_summary: 'Established store with older website. Lower lead score since they already have agency partners.',
+    grok_summary: 'Established store operating over 1 year. Lower lead score since they already have existing digital partners.',
     lead_score: 45,
     outreach_status: 'skip',
     outreach_notes: 'Already has in-house agency managing digital.'
@@ -195,33 +235,44 @@ export const INITIAL_BUSINESSES: Business[] = [
     instagram_handle: 'glowbar_aesthetics_hyd',
     instagram_url: 'https://instagram.com/glowbar_aesthetics_hyd',
     instagram_followers: 390,
+    instagram_first_post_at: '2026-10-26T11:00:00Z',
+    instagram_post_count: 7,
+    actual_launch_date: '2026-10-28', // Launched 3 days ago!
+    launch_source: 'instagram_first_post',
+    is_opening_soon: false,
     website: null,
     first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
     source: 'instagram',
     description: 'Hydrafacials, laser skin rejuvenation, and IV nutrient drips next to Radisson Gachibowli.',
-    grok_summary: 'High-ticket cosmetic clinic without lead capture landing page or consultation calendar. High value client target.',
-    lead_score: 96,
+    grok_summary: 'Brand new clinic opened 3 days ago. No consultation booking portal or website. High-ticket opportunity.',
+    lead_score: 97,
     outreach_status: 'new'
   },
   {
     id: 'hyd-010',
-    name: 'Hyderabad Chai Adda & Quick Bites',
+    name: 'BakeOasis Artisanal Patisserie',
     category: 'Food & Beverage',
-    sub_category: 'Beverage',
-    area: 'Nanakramguda',
+    sub_category: 'Bakery & Dessert',
+    area: 'Financial District',
     city: 'Hyderabad',
     lat: 17.4175,
-    lng: 78.3520,
+    lng: 78.3435,
     phone: '+91 94401 23456',
     whatsapp: '919440123456',
-    instagram_handle: null,
-    instagram_url: null,
+    instagram_handle: 'bakeoasis_fd',
+    instagram_url: 'https://instagram.com/bakeoasis_fd',
+    instagram_followers: 95,
+    instagram_first_post_at: '2026-10-29T14:00:00Z',
+    instagram_post_count: 2,
+    actual_launch_date: '2026-11-08', // Opening in 8 days!
+    launch_source: 'instagram_first_post',
+    is_opening_soon: true, // Coming Soon!
     website: null,
-    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    source: 'osm',
-    description: 'Irani chai, Osmania biscuits, samosas and snacks near US Consulate corridor.',
-    grok_summary: 'Fresh OSM node added. No digital presence, phone available.',
-    lead_score: 65,
+    first_seen_at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+    source: 'instagram',
+    description: 'Upcoming French viennoiserie, macarons, and specialty coffee. Fit-out currently underway.',
+    grok_summary: 'Opening in early November. Zero website, early Instagram teaser posts only. Best time to pitch pre-launch website.',
+    lead_score: 99,
     outreach_status: 'new'
   }
 ];

@@ -36,6 +36,7 @@ export default function RadarPage() {
     area: 'all',
     category: 'all',
     recency: 'all',
+    launch_age: 'all',
     search: '',
     status: 'all',
     source: 'all',
@@ -48,6 +49,7 @@ export default function RadarPage() {
       if (filters.area && filters.area !== 'all') params.set('area', filters.area);
       if (filters.category && filters.category !== 'all') params.set('category', filters.category);
       if (filters.recency && filters.recency !== 'all') params.set('recency', filters.recency);
+      if (filters.launch_age && filters.launch_age !== 'all') params.set('launch_age', filters.launch_age);
       if (filters.status && filters.status !== 'all') params.set('status', filters.status);
       if (filters.search) params.set('search', filters.search);
 

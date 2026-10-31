@@ -57,7 +57,7 @@ def fetch_place_details(place_id: str) -> dict:
         return {}
     params = {
         "place_id": place_id,
-        "fields": "name,formatted_phone_number,international_phone_number,website,formatted_address,url,business_status,opening_hours",
+        "fields": "name,formatted_phone_number,international_phone_number,website,formatted_address,url,business_status,opening_hours,user_ratings_total",
         "key": GOOGLE_PLACES_KEY,
     }
     try:

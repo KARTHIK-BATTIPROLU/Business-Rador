@@ -1,6 +1,6 @@
 import React from 'react';
 import { RadarFilterState } from '@/lib/types';
-import { Search, Compass, Clock, Tag, SlidersHorizontal } from 'lucide-react';
+import { Search, Compass, Clock, Tag, SlidersHorizontal, Rocket } from 'lucide-react';
 
 interface FilterBarProps {
   filters: RadarFilterState;
@@ -90,19 +90,37 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
           </select>
         </div>
 
-        {/* Recency dropdown */}
+        {/* Business Launch Age filter */}
+        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-clay-sm shadow-clay-btn border border-clay-border/80 text-xs font-medium">
+          <Rocket className="w-3.5 h-3.5 text-rose-500" />
+          <select
+            value={filters.launch_age || 'all'}
+            onChange={(e) => onChange({ launch_age: e.target.value as any })}
+            className="bg-transparent text-clay-text outline-none cursor-pointer pr-1"
+          >
+            <option value="all">All Launch Stages</option>
+            <option value="opening_soon">🔮 Opening Soon</option>
+            <option value="14d">🚀 Just Launched (&lt;14 Days)</option>
+            <option value="30d">🌟 Fresh Store (&lt;30 Days)</option>
+            <option value="90d">🗓️ Q1 Launch (&lt;90 Days)</option>
+            <option value="older">🏢 Established</option>
+          </select>
+        </div>
+
+        {/* Radar Spotted Recency dropdown */}
         <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-clay-sm shadow-clay-btn border border-clay-border/80 text-xs font-medium">
           <Clock className="w-3.5 h-3.5 text-accent-emerald" />
           <select
             value={filters.recency}
             onChange={(e) => onChange({ recency: e.target.value as RadarFilterState['recency'] })}
             className="bg-transparent text-clay-text outline-none cursor-pointer pr-1"
+            title="When the crawler first spotted the business online"
           >
-            <option value="all">All Time</option>
-            <option value="24h">⚡ Fresh (&lt;24h)</option>
-            <option value="7d">📅 Last 7 Days</option>
-            <option value="30d">🗓️ Last 30 Days</option>
-            <option value="6m">⏳ Last 6 Months</option>
+            <option value="all">Radar: All Spotted</option>
+            <option value="24h">⚡ Spotted Today (&lt;24h)</option>
+            <option value="7d">📅 Spotted This Week</option>
+            <option value="30d">🗓️ Spotted This Month</option>
+            <option value="6m">⏳ Spotted Last 6 Mo</option>
           </select>
         </div>
 

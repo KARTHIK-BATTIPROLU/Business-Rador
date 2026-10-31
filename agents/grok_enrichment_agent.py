@@ -19,7 +19,7 @@ client = OpenAI(
 
 
 def build_enrichment_prompt(business: dict) -> str:
-    return f"""You are a business intelligence assistant. Find details about this Hyderabad business.
+    return f"""You are a business intelligence assistant for Hyderabad. Find details about this business.
 
 Business Name: {business['name']}
 Area: {business.get('area', 'Hyderabad')}
@@ -34,19 +34,20 @@ Search the web and return a JSON object with ONLY these keys:
   "whatsapp": "string or null (just the number)",
   "instagram_handle": "string or null (without @)",
   "category": "one of: Food & Beverage, Clothing & Fashion, Beauty & Wellness, Fitness, Health, Retail, Services, Tech, Other",
-  "has_website": true or false,
-  "estimated_open_month": "YYYY-MM or null",
+  "website": "string URL or null",
+  "actual_launch_date": "YYYY-MM-DD or null",
+  "is_opening_soon": true or false,
+  "launch_source": "string describing source (e.g. Instagram first post, Google review, opening news) or null",
   "lead_score": integer 0-100,
   "grok_summary": "2-sentence description of the business and why it's a good outreach prospect"
 }}
 
 Lead score logic:
-- No website = +30
-- Instagram followers < 500 = +25
-- First seen within 30 days = +20
+- Launched within 30 days = +35
+- Opening soon (under fitout) = +30
+- No website = +25
+- Instagram followers < 500 = +15
 - Has phone/WhatsApp = +5
-- Is actively posting = +10
-- Has professional content team = -20
 
 Return ONLY valid JSON, no extra text."""
 
