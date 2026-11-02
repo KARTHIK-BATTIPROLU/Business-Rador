@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Business, OutreachStatus } from '@/lib/types';
 import { BusinessCard } from './BusinessCard';
-import { ArrowUpDown, RefreshCw } from 'lucide-react';
+import { ArrowUpDown, RefreshCw, Sparkles } from 'lucide-react';
 
 interface BusinessPanelProps {
   businesses: Business[];
@@ -9,6 +9,8 @@ interface BusinessPanelProps {
   onSelectBusiness: (b: Business) => void;
   onStatusChange: (id: string, status: OutreachStatus, notes?: string) => void;
   onRefresh?: () => void;
+  onTriggerScan?: () => void;
+  isScanning?: boolean;
   isLoading?: boolean;
 }
 
@@ -18,6 +20,8 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
   onSelectBusiness,
   onStatusChange,
   onRefresh,
+  onTriggerScan,
+  isScanning,
   isLoading,
 }) => {
   const [sortBy, setSortBy] = useState<'score' | 'newest' | 'name'>('score');
@@ -77,12 +81,22 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
       {/* List */}
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5">
         {sorted.length === 0 ? (
-          <div className="text-center py-16 px-4 text-clay-muted space-y-2.5">
+          <div className="text-center py-16 px-4 text-clay-muted space-y-3">
             <div className="text-4xl">📡</div>
             <p className="font-semibold text-clay-text text-sm">No businesses match active filters</p>
             <p className="text-xs text-clay-muted max-w-[280px] mx-auto leading-relaxed">
-              Try changing your area (e.g. Kokapet, Gachibowli), widening the time window, or clearing search.
+              Scan Hyderabad corridors to discover newly opened commercial enterprises.
             </p>
+            {onTriggerScan && (
+              <button
+                onClick={onTriggerScan}
+                disabled={isScanning}
+                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-clay bg-accent-blue hover:bg-blue-600 text-white font-bold text-xs shadow-clay-card transition active:translate-y-0.5"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                <span>{isScanning ? 'Scanning Hyderabad...' : '⚡ Run Live Discovery Scan'}</span>
+              </button>
+            )}
           </div>
         ) : (
           sorted.map((b) => (

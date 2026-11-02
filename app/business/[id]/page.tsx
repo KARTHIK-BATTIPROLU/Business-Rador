@@ -333,18 +333,31 @@ Phone: +91 90000 00000`;
                 <Radio className="w-3 h-3 text-accent-blue" />
                 Spotted {new Date(business.first_seen_at).toLocaleDateString()}
               </span>
-              {business.instagram_handle && (
+              {business.instagram_handle ? (
                 <>
                   <span>•</span>
                   <a
-                    href={business.instagram_url || `https://instagram.com/${business.instagram_handle}`}
+                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
+                    title={`Search ${business.name} posts and stories on Instagram`}
+                  >
+                    <Instagram className="w-3.5 h-3.5" />
+                    <span>Search @{business.instagram_handle} on IG</span>
+                  </a>
+                </>
+              ) : (
+                <>
+                  <span>•</span>
+                  <a
+                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
                   >
                     <Instagram className="w-3.5 h-3.5" />
-                    @{business.instagram_handle}
-                    {business.instagram_followers && ` (${business.instagram_followers} followers)`}
+                    <span>Search on IG</span>
                   </a>
                 </>
               )}
@@ -597,18 +610,16 @@ Phone: +91 90000 00000`;
               <ExternalLink className="w-3 h-3 text-clay-faint" />
             </a>
 
-            {business.instagram_handle && (
-              <a
-                href={business.instagram_url || `https://instagram.com/${business.instagram_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn transition"
-              >
-                <Instagram className="w-3.5 h-3.5" />
-                <span>Open @{business.instagram_handle} on Instagram</span>
-                <ExternalLink className="w-3 h-3 text-pink-400" />
-              </a>
-            )}
+            <a
+              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn transition font-semibold"
+            >
+              <Instagram className="w-3.5 h-3.5" />
+              <span>Search &ldquo;{business.name}&rdquo; on Instagram</span>
+              <ExternalLink className="w-3 h-3 text-pink-400" />
+            </a>
           </div>
         </section>
 

@@ -245,14 +245,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
 
           {business.instagram_handle && (
             <a
-              href={business.instagram_url || `https://instagram.com/${business.instagram_handle}`}
+              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
               target="_blank"
               rel="noopener noreferrer"
-              title={`@${business.instagram_handle}`}
+              title={`Search ${business.name} on Instagram`}
               className="px-2 py-1 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
             >
               <Instagram className="w-3 h-3" />
-              <span>@{business.instagram_handle}</span>
+              <span>Search IG</span>
             </a>
           )}
 

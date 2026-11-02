@@ -172,3 +172,51 @@ export async function fetchBusinessById(id: string): Promise<Business | null> {
   }
   return null;
 }
+
+export async function upsertDiscoveredBusinesses(items: Business[]): Promise<{ count: number; added: number }> {
+  let added = 0;
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const rows = items.map((b) => ({
+        id: b.id,
+        name: b.name,
+        category: b.category,
+        sub_category: b.sub_category,
+        area: b.area,
+        city: b.city || 'Hyderabad',
+        lat: b.lat,
+        lng: b.lng,
+        phone: b.phone,
+        website: b.website,
+        osm_id: b.osm_id || b.id,
+        source: b.source || 'osm',
+        description: b.description,
+        lead_score: b.lead_score,
+        outreach_status: b.outreach_status || 'new',
+        first_seen_at: b.first_seen_at || new Date().toISOString(),
+        actual_launch_date: b.actual_launch_date,
+        launch_source: b.launch_source || 'osm',
+      }));
+
+      const { data, error } = await supabase.from('businesses').upsert(rows, { onConflict: 'osm_id' }).select();
+      if (!error && data) {
+        added = data.length;
+      }
+    } catch (e) {
+      console.warn('Failed to upsert to Supabase, saving to local store:', e);
+    }
+  }
+
+  // Update in-memory store
+  const existingNames = new Set(localBusinesses.map((b) => b.name.toLowerCase().trim()));
+  for (const item of items) {
+    const key = item.name.toLowerCase().trim();
+    if (!existingNames.has(key)) {
+      localBusinesses.unshift(enrichBusinessWithMedia(item));
+      existingNames.add(key);
+      added++;
+    }
+  }
+
+  return { count: localBusinesses.length, added };
+}

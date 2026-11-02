@@ -1,5 +1,14 @@
 import { Business, BusinessCategory, MediaPhoto, BusinessDossier } from './types';
 
+export function getInstagramSearchUrl(businessName: string, area?: string, handle?: string | null): string {
+  // If the handle is an explicit external verified URL, return it
+  if (handle?.startsWith('http')) return handle;
+  // Always use Instagram search keyword exploration to prevent dead 404 pages
+  const cleanName = businessName.replace(/[^\w\s]/gi, '').trim();
+  const query = `${cleanName} ${area || 'Hyderabad'}`.trim();
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`;
+}
+
 // Curated high-resolution photo galleries representing real Hyderabad business corridors
 const CATEGORY_MEDIA: Record<
   string,

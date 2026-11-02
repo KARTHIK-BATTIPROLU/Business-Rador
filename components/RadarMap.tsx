@@ -48,7 +48,7 @@ function createPopupHTML(b: Business): string {
     : '';
 
   const igLink = b.instagram_handle
-    ? `<a href="${b.instagram_url || `https://instagram.com/${b.instagram_handle}`}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 @${b.instagram_handle}</a>`
+    ? `<a href="https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(b.name + ' ' + b.area)}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 Search IG</a>`
     : '';
 
   return `

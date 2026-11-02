@@ -1,11 +1,13 @@
 import React from 'react';
 import { RadarFilterState } from '@/lib/types';
-import { Search, Compass, Clock, Tag, SlidersHorizontal, Rocket } from 'lucide-react';
+import { Search, Compass, Clock, Tag, SlidersHorizontal, Rocket, Sparkles } from 'lucide-react';
 
 interface FilterBarProps {
   filters: RadarFilterState;
   onChange: (updated: Partial<RadarFilterState>) => void;
   onAreaJump?: (area: string) => void;
+  onTriggerScan?: () => void;
+  isScanning?: boolean;
 }
 
 const AREAS = [
@@ -35,7 +37,13 @@ const CATEGORIES = [
   'Services'
 ];
 
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJump }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({
+  filters,
+  onChange,
+  onAreaJump,
+  onTriggerScan,
+  isScanning,
+}) => {
   return (
     <div className="bg-clay-canvas border-b border-clay-border/80 px-4 py-3 space-y-2.5">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -161,6 +169,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
             📍 {area}
           </button>
         ))}
+
+        {onTriggerScan && (
+          <button
+            onClick={onTriggerScan}
+            disabled={isScanning}
+            className="ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-clay-btn transition active:translate-y-0.5 disabled:opacity-75"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+            <span>
+              {isScanning
+                ? 'Scanning Overpass...'
+                : `⚡ Scan ${filters.area !== 'all' ? filters.area : 'Hyderabad'} for New Businesses`}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

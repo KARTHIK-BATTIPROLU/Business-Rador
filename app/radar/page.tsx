@@ -7,7 +7,7 @@ import { StatsBar } from '@/components/StatsBar';
 import { FilterBar } from '@/components/FilterBar';
 import { BusinessPanel } from '@/components/BusinessPanel';
 import { AREA_COORDINATES } from '@/components/RadarMap';
-import { Radar, Radio, Github, ExternalLink, Database, Home, ArrowLeft } from 'lucide-react';
+import { Radar, Radio, Github, ExternalLink, Database, Home, ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 // Dynamic import with SSR disabled for WebGL canvas
@@ -28,6 +28,8 @@ export default function RadarPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
   const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number; zoom?: number } | null>(
     null
   );
@@ -88,6 +90,34 @@ export default function RadarPage() {
     }
   };
 
+  const handleManualScan = async (selectedArea?: string) => {
+    setIsScanning(true);
+    const targetArea = selectedArea || (filters.area !== 'all' ? filters.area : 'all');
+    setScanMessage(`📡 Querying live GPS nodes across ${targetArea === 'all' ? 'Hyderabad West corridors (Kokapet, Gachibowli, Financial District)' : targetArea}...`);
+
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: targetArea }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setScanMessage(
+          `✅ Discovery Complete: Spotted ${data.discovered_count} commercial businesses in Hyderabad! (${data.newly_added} fresh leads added)`
+        );
+        await loadBusinesses();
+      } else {
+        setScanMessage(`⚠️ Scan notice: ${data.error || 'Scan finished with fallback data'}`);
+      }
+    } catch (err: any) {
+      setScanMessage(`❌ Scan error: ${err.message}`);
+    } finally {
+      setIsScanning(false);
+      setTimeout(() => setScanMessage(null), 8000);
+    }
+  };
+
   const handleAreaJump = (areaName: string) => {
     const coords = AREA_COORDINATES[areaName];
     if (coords) {
@@ -130,8 +160,24 @@ export default function RadarPage() {
           </div>
         </div>
 
-        {/* Navigation & Info */}
+        {/* Navigation & Live Manual Scanner Action */}
         <div className="flex items-center gap-2.5">
+          {/* Prominent Live Radar Scan Button */}
+          <button
+            onClick={() => handleManualScan()}
+            disabled={isScanning}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-clay-sm bg-accent-blue hover:bg-blue-600 text-white font-bold text-xs shadow-clay-card transition active:translate-y-0.5 disabled:opacity-75"
+            title="Query physical GPS nodes and Overpass API across Hyderabad corridors"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : 'animate-pulse'}`} />
+            <span className="hidden sm:inline">
+              {isScanning ? 'Scanning Hyderabad...' : '⚡ Scan Hyderabad for New Businesses'}
+            </span>
+            <span className="sm:hidden">
+              {isScanning ? 'Scanning...' : '⚡ Scan Hyd'}
+            </span>
+          </button>
+
           <Link
             href="/"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-xs font-semibold text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
@@ -142,7 +188,7 @@ export default function RadarPage() {
 
           <Link
             href="/todos"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-accent-blue border border-blue-200/80 shadow-clay-btn transition active:translate-y-0.5"
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-accent-blue border border-blue-200/80 shadow-clay-btn transition active:translate-y-0.5"
           >
             <Database className="w-3.5 h-3.5 text-accent-blue" />
             <span>Supabase SSR</span>
@@ -152,14 +198,34 @@ export default function RadarPage() {
             href="https://github.com/KARTHIK-BATTIPROLU/Business-Rador"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-xs font-semibold text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-xs font-semibold text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
           >
             <Github className="w-3.5 h-3.5 text-slate-700" />
-            <span className="hidden md:inline">GitHub Repository</span>
+            <span>GitHub</span>
             <ExternalLink className="w-3 h-3 text-clay-faint" />
           </a>
         </div>
       </header>
+
+      {/* Live Scan Notification Toast */}
+      {scanMessage && (
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-xs px-5 py-2 font-medium flex items-center justify-between shadow-md z-30 transition-all">
+          <div className="flex items-center gap-2">
+            {isScanning ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+            )}
+            <span className="font-semibold">{scanMessage}</span>
+          </div>
+          <button
+            onClick={() => setScanMessage(null)}
+            className="text-white/80 hover:text-white px-2 py-0.5 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Bar */}
       <StatsBar businesses={businesses} selectedArea={filters.area} />
@@ -169,6 +235,8 @@ export default function RadarPage() {
         filters={filters}
         onChange={(updated) => setFilters((prev) => ({ ...prev, ...updated }))}
         onAreaJump={handleAreaJump}
+        onTriggerScan={() => handleManualScan(filters.area)}
+        isScanning={isScanning}
       />
 
       {/* Main Split Layout */}
@@ -196,6 +264,8 @@ export default function RadarPage() {
             }}
             onStatusChange={handleStatusChange}
             onRefresh={loadBusinesses}
+            onTriggerScan={() => handleManualScan(filters.area)}
+            isScanning={isScanning}
             isLoading={isLoading}
           />
         </div>
