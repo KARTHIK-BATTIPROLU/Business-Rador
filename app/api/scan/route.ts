@@ -16,8 +16,8 @@ const HYDERABAD_SCAN_GRIDS: Record<string, { lat: number; lng: number; radius: n
 
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://z.overpass-api.de/api/interpreter',
 ];
 
 const OSM_CATEGORY_MAP: Record<string, BusinessCategory> = {
@@ -178,7 +178,7 @@ async function queryOverpassWithFallback(query: string): Promise<any[]> {
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -198,8 +198,7 @@ async function queryOverpassWithFallback(query: string): Promise<any[]> {
           return json.elements;
         }
       }
-    } catch (e) {
-      console.warn(`Overpass endpoint ${endpoint} failed, trying next mirror:`, e);
+    } catch {
       continue;
     }
   }
@@ -229,19 +228,23 @@ export async function POST(req: NextRequest) {
     const discoveredBusinesses: Business[] = [];
     const seenOsmIds = new Set<string>();
 
-    for (const [areaName, grid] of Object.entries(gridsToScan)) {
+    const gridPromises = Object.entries(gridsToScan).map(async ([areaName, grid]) => {
       const overpassQuery = `
-[out:json][timeout:15];
+[out:json][timeout:8];
 (
   node["amenity"~"restaurant|cafe|fast_food|bar|pub|bakery|pharmacy"](around:${grid.radius},${grid.lat},${grid.lng});
   node["shop"~"clothes|boutique|beauty|hairdresser|supermarket"](around:${grid.radius},${grid.lat},${grid.lng});
   node["leisure"~"gym|fitness_centre"](around:${grid.radius},${grid.lat},${grid.lng});
 );
-out body 8;
+out body 6;
 `;
-
       const elements = await queryOverpassWithFallback(overpassQuery);
+      return { areaName, elements };
+    });
 
+    const results = await Promise.all(gridPromises);
+
+    for (const { areaName, elements } of results) {
       for (const el of elements) {
         const tags = el.tags || {};
         const name = tags.name || tags['name:en'];
