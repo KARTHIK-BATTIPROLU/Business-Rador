@@ -233,7 +233,7 @@ Hyderabad Business Radar Partner
 Phone: +91 90000 00000`;
 
   return (
-    <div className="min-h-screen bg-clay-canvas text-clay-text flex flex-col font-sans selection:bg-blue-100 selection:text-accent-blue pb-20">
+    <div className="min-h-screen bg-clay-canvas text-clay-text flex flex-col font-sans selection:bg-blue-100 selection:text-accent-blue pb-20 overflow-y-auto">
       {/* Sticky Top Header */}
       <header className="h-16 border-b border-clay-border/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
