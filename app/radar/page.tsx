@@ -35,10 +35,13 @@ export default function RadarPage() {
   );
 
   const [filters, setFilters] = useState<RadarFilterState>({
+    region: 'all',
     area: 'all',
     category: 'all',
     recency: 'all',
     launch_age: 'all',
+    missing_website_only: false,
+    low_social_only: false,
     search: '',
     status: 'all',
     source: 'all',
@@ -48,10 +51,13 @@ export default function RadarPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
+      if (filters.region && filters.region !== 'all') params.set('region', filters.region);
       if (filters.area && filters.area !== 'all') params.set('area', filters.area);
       if (filters.category && filters.category !== 'all') params.set('category', filters.category);
       if (filters.recency && filters.recency !== 'all') params.set('recency', filters.recency);
       if (filters.launch_age && filters.launch_age !== 'all') params.set('launch_age', filters.launch_age);
+      if (filters.missing_website_only) params.set('missing_website_only', 'true');
+      if (filters.low_social_only) params.set('low_social_only', 'true');
       if (filters.status && filters.status !== 'all') params.set('status', filters.status);
       if (filters.search) params.set('search', filters.search);
 
@@ -90,21 +96,28 @@ export default function RadarPage() {
     }
   };
 
-  const handleManualScan = async (selectedArea?: string) => {
+  const handleManualScan = async (selectedRegion?: string) => {
     setIsScanning(true);
-    const targetArea = selectedArea || (filters.area !== 'all' ? filters.area : 'all');
-    setScanMessage(`📡 Querying live GPS nodes across ${targetArea === 'all' ? 'Hyderabad West corridors (Kokapet, Gachibowli, Financial District)' : targetArea}...`);
+    const targetRegion = selectedRegion || filters.region || 'all';
+    const targetArea = filters.area !== 'all' ? filters.area : 'all';
+
+    let scanTitle = 'Hyderabad West corridors';
+    if (targetRegion === 'texas') scanTitle = 'Texas Comptroller Open Data (SODA) & Austin/Dallas nodes';
+    else if (targetRegion === 'london') scanTitle = 'London Shoreditch & Soho GPS nodes';
+    else if (targetArea !== 'all') scanTitle = targetArea;
+
+    setScanMessage(`📡 Querying live government & GPS nodes across ${scanTitle}...`);
 
     try {
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area: targetArea }),
+        body: JSON.stringify({ area: targetArea, region: targetRegion }),
       });
       const data = await res.json();
       if (data.success) {
         setScanMessage(
-          `✅ Discovery Complete: Spotted ${data.discovered_count} commercial businesses in Hyderabad! (${data.newly_added} fresh leads added)`
+          `✅ Discovery Complete: Spotted ${data.discovered_count} commercial businesses! (${data.newly_added} fresh leads added to pipeline)`
         );
         await loadBusinesses();
       } else {
@@ -147,7 +160,13 @@ export default function RadarPage() {
                 Business Founder Radar
               </h1>
               <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-accent-blue border border-blue-200/80 font-semibold shadow-clay-pill hidden sm:inline">
-                Hyderabad MSME Pipeline
+                {filters.region === 'texas'
+                  ? '🇺🇸 Texas High-Ticket Pipeline ($)'
+                  : filters.region === 'london'
+                  ? '🇬🇧 London Independent Pipeline (£)'
+                  : filters.region === 'hyderabad'
+                  ? '🇮🇳 Hyderabad MSME Pipeline (₹)'
+                  : '🌐 Global MSME & Retail Pipeline'}
               </span>
             </div>
             <div className="text-[11px] text-clay-muted flex items-center gap-2 font-medium">
@@ -155,7 +174,11 @@ export default function RadarPage() {
                 <Radio className="w-2.5 h-2.5 text-accent-emerald animate-ping" /> Scans Every 8h
               </span>
               <span>•</span>
-              <span>Google Maps · Instagram · OpenStreetMap</span>
+              <span>
+                {filters.region === 'texas'
+                  ? 'Texas Comptroller Open Data · Google Maps · Instagram'
+                  : 'Google Maps · Instagram · OpenStreetMap'}
+              </span>
             </div>
           </div>
         </div>
@@ -164,17 +187,23 @@ export default function RadarPage() {
         <div className="flex items-center gap-2.5">
           {/* Prominent Live Radar Scan Button */}
           <button
-            onClick={() => handleManualScan()}
+            onClick={() => handleManualScan(filters.region)}
             disabled={isScanning}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-clay-sm bg-accent-blue hover:bg-blue-600 text-white font-bold text-xs shadow-clay-card transition active:translate-y-0.5 disabled:opacity-75"
-            title="Query physical GPS nodes and Overpass API across Hyderabad corridors"
+            title="Query physical GPS nodes and live government permit databases"
           >
             <Sparkles className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : 'animate-pulse'}`} />
             <span className="hidden sm:inline">
-              {isScanning ? 'Scanning Hyderabad...' : '⚡ Scan Hyderabad for New Businesses'}
+              {isScanning
+                ? 'Scanning Sources...'
+                : filters.region === 'texas'
+                ? '⚡ Scan Texas Permits (SODA API)'
+                : filters.region === 'london'
+                ? '⚡ Scan London Corridors'
+                : '⚡ Scan Hyderabad for New Businesses'}
             </span>
             <span className="sm:hidden">
-              {isScanning ? 'Scanning...' : '⚡ Scan Hyd'}
+              {isScanning ? 'Scanning...' : '⚡ Scan'}
             </span>
           </button>
 

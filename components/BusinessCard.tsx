@@ -154,8 +154,9 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
 
           {/* Subtitle metadata */}
           <div className="flex items-center gap-2 text-xs text-clay-muted flex-wrap font-medium">
-            <span className="flex items-center gap-1 text-clay-text">
+            <span className="flex items-center gap-1 text-clay-text font-semibold">
               <MapPin className="w-3.5 h-3.5 text-rose-500" /> {business.area}
+              {business.city && <span className="text-clay-muted font-normal">({business.city})</span>}
             </span>
             <span>•</span>
             <span className="text-clay-muted">{business.category}</span>
@@ -168,20 +169,38 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
               <Radio className="w-3 h-3 text-accent-blue" />
               <span>Spotted {formatRecency(business.first_seen_at)}</span>
             </span>
+            {business.estimated_site_budget && (
+              <>
+                <span>•</span>
+                <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {business.estimated_site_budget}
+                </span>
+              </>
+            )}
           </div>
 
-          {/* Instagram Account Age & Activity Pill */}
-          {(business.instagram_post_count !== undefined || business.instagram_first_post_at) && (
-            <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
-              <Camera className="w-3 h-3" />
-              <span>
-                {business.instagram_first_post_at
-                  ? `IG first post ${formatRecency(business.instagram_first_post_at)}`
-                  : 'Early IG account'}
-                {business.instagram_post_count !== undefined && business.instagram_post_count !== null && (
-                  <strong className="ml-1 text-pink-900">({business.instagram_post_count} posts total)</strong>
-                )}
-              </span>
+          {/* Instagram Account Age, Followers & Low-Footprint Pill */}
+          {(business.instagram_post_count !== undefined || business.instagram_followers !== undefined || business.instagram_first_post_at) && (
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
+                <Camera className="w-3 h-3" />
+                <span>
+                  {business.instagram_followers !== undefined && business.instagram_followers !== null && (
+                    <strong className="text-pink-900">{business.instagram_followers} followers</strong>
+                  )}
+                  {business.instagram_post_count !== undefined && business.instagram_post_count !== null && (
+                    <span className="ml-1 text-pink-800">· {business.instagram_post_count} posts</span>
+                  )}
+                  {business.instagram_first_post_at && (
+                    <span className="ml-1 text-pink-600">({formatRecency(business.instagram_first_post_at)})</span>
+                  )}
+                </span>
+              </div>
+              {(business.instagram_followers ?? 0) < 500 && (
+                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200" title="Low social presence indicates founder is early and actively building brand">
+                  ⚡ Low Social Footprint
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -245,7 +264,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
 
           {business.instagram_handle && (
             <a
-              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
               target="_blank"
               rel="noopener noreferrer"
               title={`Search ${business.name} on Instagram`}

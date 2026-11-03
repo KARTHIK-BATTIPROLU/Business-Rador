@@ -20,6 +20,7 @@ const MAP_STYLES = {
 };
 
 export const AREA_COORDINATES: Record<string, [number, number]> = {
+  // Hyderabad Corridors
   Kokapet: [78.3298, 17.4156],
   Gachibowli: [78.3489, 17.44],
   'HITECH City': [78.3908, 17.4486],
@@ -30,6 +31,25 @@ export const AREA_COORDINATES: Record<string, [number, number]> = {
   'Banjara Hills': [78.435, 17.4156],
   Kondapur: [78.355, 17.46],
   Narsingi: [78.3588, 17.3883],
+  Hyderabad: [78.35, 17.43],
+
+  // Texas Corridors (USA)
+  'South Congress': [-97.7495, 30.2510],
+  'East Austin': [-97.7210, 30.2635],
+  Austin: [-97.7431, 30.2672],
+  Uptown: [-96.8040, 32.7985],
+  'Deep Ellum': [-96.7845, 32.7835],
+  Dallas: [-96.7970, 32.7767],
+  Montrose: [-95.3910, 29.7420],
+  'The Heights': [-95.3980, 29.7990],
+  Houston: [-95.3698, 29.7604],
+  Texas: [-97.7431, 30.2672],
+
+  // London Corridors (UK / Europe)
+  Shoreditch: [-0.0785, 51.5245],
+  Soho: [-0.1340, 51.5135],
+  'Covent Garden': [-0.1240, 51.5117],
+  London: [-0.1276, 51.5074],
 };
 
 function createPopupHTML(b: Business): string {
@@ -37,6 +57,10 @@ function createPopupHTML(b: Business): string {
     ? '<span style="display:inline-block;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #c7d2fe;">✨ OPENING SOON</span>'
     : b.actual_launch_date
     ? `<span style="display:inline-block;background:#ecfdf5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #a7f3d0;">🚀 Launched ${b.actual_launch_date}</span>`
+    : '';
+
+  const budgetBadge = b.estimated_site_budget
+    ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;border:1px solid #fde68a;">💰 ${b.estimated_site_budget}</span>`
     : '';
 
   const waLink = b.whatsapp
@@ -48,7 +72,7 @@ function createPopupHTML(b: Business): string {
     : '';
 
   const igLink = b.instagram_handle
-    ? `<a href="https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(b.name + ' ' + b.area)}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 Search IG</a>`
+    ? `<a href="https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(b.name + ' ' + (b.city || b.area))}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 Search IG</a>`
     : '';
 
   return `
@@ -58,22 +82,23 @@ function createPopupHTML(b: Business): string {
         <span style="background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:11px; padding:2px 6px; border-radius:6px; border:1px solid #bfdbfe; white-space:nowrap;">🔥 ${b.lead_score}</span>
       </div>
       <div style="font-size:11px; color:#64748b; margin-bottom:6px; display:flex; gap:6px; align-items:center;">
-        <span>📍 <strong>${b.area}</strong></span>
+        <span>📍 <strong>${b.area || b.city}</strong> (${b.city})</span>
         <span>•</span>
         <span>${b.category}</span>
       </div>
-      <div style="margin-bottom:8px;">
+      <div style="margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap;">
         ${launchBadge}
+        ${budgetBadge}
       </div>
       <p style="font-size:11px; color:#475569; margin:0 0 10px 0; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-        ${b.description || 'Newly discovered business in Hyderabad.'}
+        ${b.description || 'Newly discovered commercial business.'}
       </p>
       <div style="display:flex; gap:5px; margin-bottom:8px;">
         ${waLink}
         ${igLink || callLink}
       </div>
       <a href="/business/${b.id}" style="display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; background:#2563eb; color:#ffffff; padding:7px 10px; border-radius:7px; font-size:12px; font-weight:700; text-decoration:none; box-shadow:0 2px 4px rgba(37,99,235,0.25);">
-        <span>See More Details & Photos</span>
+        <span>See Details, Dossier & Pitch</span>
         <span>→</span>
       </a>
     </div>

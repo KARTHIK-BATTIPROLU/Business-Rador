@@ -5,7 +5,7 @@ export function getInstagramSearchUrl(businessName: string, area?: string, handl
   if (handle?.startsWith('http')) return handle;
   // Always use Instagram search keyword exploration to prevent dead 404 pages
   const cleanName = businessName.replace(/[^\w\s]/gi, '').trim();
-  const query = `${cleanName} ${area || 'Hyderabad'}`.trim();
+  const query = `${cleanName} ${area || ''}`.trim();
   return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`;
 }
 
@@ -433,21 +433,52 @@ export function enrichBusinessWithMedia(b: Business): Business {
     ];
   }
 
-  const verifiedAddress = `${b.name}, Ground Floor, Main Road, ${b.area}, Hyderabad, Telangana 500075`;
-  const whatsappPitch = `Hi ${b.name} team! Saw your newly launched store in ${b.area}. Congratulations on opening! I noticed you do not have an official website or digital menu yet. We build fast, high-converting mobile sites for local businesses in Hyderabad. Would love to send a 1-minute video demo if you're open to it?`;
-  const coldCallScript = `Hi! Am I speaking with the founder or manager of ${b.name}? Great! First off, congratulations on opening your new location in ${b.area}. My name is [Your Name] from Hyderabad Digital Studio. We track newly opened spots in Kokapet & Financial District. I noticed your store is getting great early footfall, but customers searching on Google don't find a direct website or booking page yet. Do you have 2 minutes this week to look at a quick prototype we drafted for you?`;
+  const isUS = b.country === 'USA' || b.state === 'Texas' || ['Austin', 'Dallas', 'Houston', 'San Antonio'].includes(b.city);
+  const isUK = b.country === 'UK' || b.city === 'London';
+
+  let verifiedAddress = b.dossier?.verified_address;
+  if (!verifiedAddress) {
+    if (isUS) {
+      verifiedAddress = `${b.name}, ${b.area}, ${b.city}, ${b.state || 'TX'}, USA`;
+    } else if (isUK) {
+      verifiedAddress = `${b.name}, ${b.area}, London, UK`;
+    } else {
+      verifiedAddress = `${b.name}, Ground Floor, Main Road, ${b.area}, Hyderabad, Telangana 500075`;
+    }
+  }
+
+  let whatsappPitch = '';
+  let coldCallScript = '';
+  let coldEmailPitch = '';
+
+  if (isUS) {
+    whatsappPitch = `Hi ${b.name} team! Noticed your new location in ${b.area}, ${b.city}. Congratulations! Noticed you don't have an official website or online reservation/ordering system live yet. We build high-converting mobile sites for Texas local businesses in 5 days ($2,800 turnkey). Open to a 60-second video mockup?`;
+    coldCallScript = `Hi! Am I speaking with the founder or general manager of ${b.name}? Congratulations on securing your spot in ${b.area}, ${b.city}! My name is [Your Name]. We noticed your sales tax permit was recently registered and you're gearing up for opening, but customers searching on Google Maps don't have a direct website to check your menu or book. Do you have 2 minutes this week to review a quick 1-page prototype we drafted?`;
+    coldEmailPitch = `Subject: Quick question about ${b.name}'s new ${b.city} launch\n\nHey ${b.name} team,\n\nHuge congrats on launching in ${b.area}! Noticed your permit came through and foot-traffic is picking up.\n\nI was looking you guys up on Google Maps and noticed your official website and online ordering/booking link isn't live yet. For new Texas openings, over 70% of first-month discovery comes from local mobile searches.\n\nWe build turnkey 5-page opening websites with Google Maps SEO, mobile menus, and booking in 5 business days ($2,500 - $3,800).\n\nMind if I send over a quick 60-second video showing what your site could look like?\n\nBest,\n[Your Name]`;
+  } else if (isUK) {
+    whatsappPitch = `Hi ${b.name} team! Congratulations on your new opening in ${b.area}, London. Noticed your official website isn't live yet. We build fast, responsive sites for London independents in 5 days (£2,200 turnkey). Open to a quick preview mockup?`;
+    coldCallScript = `Hi! Am I speaking with the owner of ${b.name}? Congratulations on your new place in ${b.area}! I noticed you're already gaining great local traction, but Google searches don't yet lead to an official site or bookings. Do you have 2 minutes to check a quick prototype we put together?`;
+    coldEmailPitch = `Subject: Website prototype for ${b.name} in ${b.area}\n\nHi team,\n\nSaw your new launch in ${b.area}. We create clean, fast websites for independent London brands (£2,000 - £3,200).\n\nHappy to share a 1-minute video demo of a custom layout designed for your concept.`;
+  } else {
+    whatsappPitch = `Hi ${b.name} team! Saw your newly launched store in ${b.area}. Congratulations on opening! I noticed you do not have an official website or digital menu yet. We build fast, high-converting mobile sites for local businesses in Hyderabad (₹35k - ₹65k). Would love to send a 1-minute video demo if you're open to it?`;
+    coldCallScript = `Hi! Am I speaking with the founder or manager of ${b.name}? Great! First off, congratulations on opening your new location in ${b.area}. My name is [Your Name] from Hyderabad Digital Studio. We track newly opened spots in Kokapet & Financial District. I noticed your store is getting great early footfall, but customers searching on Google don't find a direct website or booking page yet. Do you have 2 minutes this week to look at a quick prototype we drafted for you?`;
+    coldEmailPitch = `Subject: Website & WhatsApp ordering for ${b.name} in ${b.area}\n\nHi Founder,\n\nCongratulations on launching in ${b.area}!\n\nNotice you have active social posts but no direct website for direct menu ordering. We build custom websites with direct WhatsApp ordering in 72 hours (₹35,000 - ₹50,000).\n\nWould love to share a free design mockup today.`;
+  }
+
+  const priceTier = isUS ? '$$$ (Premium / High-Ticket)' : isUK ? '££ (Moderate / Premium)' : '₹₹ (Moderate)';
 
   const dossier: BusinessDossier = {
     verified_address: verifiedAddress,
     hours: 'Monday - Sunday: 08:30 AM - 10:30 PM',
-    price_tier: '₹₹ (Moderate)',
-    google_rating: b.id === 'hyd-010' ? 0 : 4.8,
-    google_reviews_count: b.id === 'hyd-010' ? 0 : Math.floor(Math.random() * 20) + 3,
+    price_tier: priceTier,
+    google_rating: b.id === 'hyd-010' || b.id === 'tx-005' ? 0 : 4.8,
+    google_reviews_count: b.id === 'hyd-010' || b.id === 'tx-005' ? 0 : Math.floor(Math.random() * 20) + 3,
     instagram_bio: meta.instagram_bio,
     growth_opportunities: meta.opportunities,
     suggested_pitch: meta.pitch_template.replace('{name}', b.name).replace('{area}', b.area),
     whatsapp_pitch: whatsappPitch,
     cold_call_script: coldCallScript,
+    cold_email_pitch: coldEmailPitch,
     google_photos: googlePhotos,
     instagram_posts: instagramPosts,
   };

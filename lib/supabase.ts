@@ -56,6 +56,27 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
   // Fallback to local memory store
   let res = localBusinesses.map((b) => enrichBusinessWithMedia(b));
 
+  // Region filter (Hyderabad, Texas USA, London UK)
+  if (filters.region && filters.region !== 'all') {
+    if (filters.region === 'hyderabad') {
+      res = res.filter((b) => b.city?.toLowerCase() === 'hyderabad' || b.country?.toLowerCase() === 'india' || !b.country);
+    } else if (filters.region === 'texas') {
+      res = res.filter((b) => b.state?.toLowerCase() === 'texas' || ['austin', 'dallas', 'houston', 'san antonio'].includes(b.city?.toLowerCase()));
+    } else if (filters.region === 'london') {
+      res = res.filter((b) => b.city?.toLowerCase() === 'london' || b.country?.toLowerCase() === 'uk');
+    }
+  }
+
+  // Store Leads inspired negative filter: Missing Website Only
+  if (filters.missing_website_only) {
+    res = res.filter((b) => !b.website);
+  }
+
+  // Low Instagram follower filter (< 500 followers)
+  if (filters.low_social_only) {
+    res = res.filter((b) => (b.instagram_followers ?? 0) < 500);
+  }
+
   if (filters.area && filters.area !== 'all') {
     res = res.filter((b) => b.area.toLowerCase().includes(filters.area.toLowerCase()));
   }
@@ -73,7 +94,8 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
     res = res.filter((b) =>
       b.name.toLowerCase().includes(s) ||
       (b.description && b.description.toLowerCase().includes(s)) ||
-      (b.area && b.area.toLowerCase().includes(s))
+      (b.area && b.area.toLowerCase().includes(s)) ||
+      (b.city && b.city.toLowerCase().includes(s))
     );
   }
 

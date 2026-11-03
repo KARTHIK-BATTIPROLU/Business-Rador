@@ -207,30 +207,31 @@ export default function BusinessDetailsPage() {
   // Pitch scripts
   const whatsappPitchText =
     business.dossier?.whatsapp_pitch ||
-    `Hi ${business.name} team! Congratulations on opening in ${business.area}. Saw your new store and noticed you don't have an official website or digital ordering menu yet. We build fast, mobile-first websites for local brands in Hyderabad. Can I send a 1-minute demo?`;
+    `Hi ${business.name} team! Congratulations on opening in ${business.area}. Saw your new store and noticed you don't have an official website or digital ordering menu yet. We build fast, mobile-first websites for local brands. Can I send a 1-minute demo?`;
 
   const coldCallScriptText =
     business.dossier?.cold_call_script ||
-    `Hi! Am I speaking with the founder of ${business.name}? Congratulations on your new launch in ${business.area}! My name is [Your Name] from Hyderabad Digital Studio. We noticed your store is getting great early footfall, but customers searching on Google don't find a direct website yet. Do you have 2 minutes this week to look at a quick prototype we drafted for you?`;
+    `Hi! Am I speaking with the founder of ${business.name}? Congratulations on your new launch in ${business.area}! My name is [Your Name]. We noticed your store is getting great early footfall, but customers searching on Google don't find a direct website yet. Do you have 2 minutes this week to look at a quick prototype we drafted for you?`;
 
-  const emailProposalText = `Subject: Quick question regarding ${business.name}'s digital presence in ${business.area}
+  const emailProposalText =
+    business.dossier?.cold_email_pitch ||
+    `Subject: Quick question regarding ${business.name}'s digital presence in ${business.area}
 
 Hi ${business.name} Team,
 
-First of all, congratulations on opening your new location in ${business.area}, Hyderabad!
+First of all, congratulations on opening your new location in ${business.area}!
 
 While researching newly launched spots in the corridor, I noticed your storefront and Instagram presence are gaining traction, but you currently don't have a dedicated website or direct booking/ordering portal.
 
-We specialize in helping newly launched businesses in Hyderabad capture high-income local tech commuters:
-1. Fast mobile website with 0% commissions (saving 25-30% on Swiggy/Zomato)
+We specialize in helping newly launched businesses capture high-value customers:
+1. Fast mobile website with 0% commissions
 2. Google Business Profile setup & 5-star review acquisition
-3. Local SEO for Kokapet & Financial District residents
+3. Local SEO for area residents
 
 Would you be open to reviewing a complimentary 2-page digital prototype we drafted for ${business.name}?
 
 Best regards,
-Hyderabad Business Radar Partner
-Phone: +91 90000 00000`;
+Business Radar Partner Team`;
 
   return (
     <div className="min-h-screen bg-clay-canvas text-clay-text flex flex-col font-sans selection:bg-blue-100 selection:text-accent-blue pb-20 overflow-y-auto">
@@ -337,7 +338,7 @@ Phone: +91 90000 00000`;
                 <>
                   <span>•</span>
                   <a
-                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
@@ -351,7 +352,7 @@ Phone: +91 90000 00000`;
                 <>
                   <span>•</span>
                   <a
-                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
@@ -463,7 +464,7 @@ Phone: +91 90000 00000`;
               )}
             </div>
             <div className="text-[11px] text-amber-800 font-medium">
-              {business.website ? 'Needs redesign / conversion audit' : 'Ready for ₹30k - ₹75k agency site pitch'}
+              {business.website ? 'Needs redesign / conversion audit' : `Ready for ${business.estimated_site_budget || (business.currency === 'USD' ? '$2,800 – $4,500' : business.currency === 'GBP' ? '£2,000 – £3,500' : '₹35,000 – ₹75,000')} agency site pitch`}
             </div>
           </div>
         </div>
@@ -589,7 +590,7 @@ Phone: +91 90000 00000`;
           <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
             <span className="text-clay-muted font-medium">Verify Live on Web:</span>
             <a
-              href={`https://www.google.com/search?q=${encodeURIComponent(`${business.name} ${business.area} Hyderabad`)}&tbm=isch`}
+              href={`https://www.google.com/search?q=${encodeURIComponent(`${business.name} ${business.area} ${business.city || ''}`)}&tbm=isch`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border shadow-clay-btn transition"
@@ -600,7 +601,7 @@ Phone: +91 90000 00000`;
             </a>
 
             <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area} Hyderabad`)}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area} ${business.city || ''}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border shadow-clay-btn transition"
@@ -611,7 +612,7 @@ Phone: +91 90000 00000`;
             </a>
 
             <a
-              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + business.area)}`}
+              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn transition font-semibold"
