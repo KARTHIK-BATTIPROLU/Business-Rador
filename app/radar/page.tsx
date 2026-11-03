@@ -52,11 +52,14 @@ export default function RadarPage() {
     try {
       const params = new URLSearchParams();
       if (filters.region && filters.region !== 'all') params.set('region', filters.region);
+      if (filters.us_state && filters.us_state !== 'all') params.set('us_state', filters.us_state);
       if (filters.area && filters.area !== 'all') params.set('area', filters.area);
       if (filters.category && filters.category !== 'all') params.set('category', filters.category);
       if (filters.recency && filters.recency !== 'all') params.set('recency', filters.recency);
       if (filters.launch_age && filters.launch_age !== 'all') params.set('launch_age', filters.launch_age);
+      if (filters.has_website) params.set('has_website', filters.has_website);
       if (filters.missing_website_only) params.set('missing_website_only', 'true');
+      if (filters.instagram_filter) params.set('instagram_filter', filters.instagram_filter);
       if (filters.low_social_only) params.set('low_social_only', 'true');
       if (filters.status && filters.status !== 'all') params.set('status', filters.status);
       if (filters.search) params.set('search', filters.search);

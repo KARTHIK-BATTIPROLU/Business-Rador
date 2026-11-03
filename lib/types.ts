@@ -77,16 +77,27 @@ export interface Business {
   outreach_notes?: string | null;
   contacted_at?: string | null;
   dossier?: BusinessDossier;
+  is_enriched?: boolean;
+  last_enriched_at?: string | null;
+  instagram_verified?: boolean | null;
+  instagram_bio?: string | null;
+  media_photos?: MediaPhoto[];
+  google_photos?: MediaPhoto[];
+  instagram_posts?: MediaPhoto[];
 }
 
 export interface RadarFilterState {
   region: 'all' | 'hyderabad' | 'texas' | 'london';
+  country?: 'all' | 'usa' | 'uk' | 'india';
+  us_state?: string;
   area: string;
   category: string;
   recency: 'all' | '24h' | '7d' | '30d' | '6m';
   launch_age?: 'all' | 'opening_soon' | '14d' | '30d' | '90d' | 'older';
   missing_website_only?: boolean; // Store Leads inspired: filter only businesses without a website
+  has_website?: 'all' | 'yes' | 'no';
   low_social_only?: boolean; // Filter businesses with < 500 Instagram followers
+  instagram_filter?: 'all' | 'low_followers' | 'no_instagram' | 'dormant_posts';
   search: string;
   status: 'all' | OutreachStatus;
   source: 'all' | 'google_maps' | 'instagram' | 'osm' | 'texas_comptroller';

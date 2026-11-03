@@ -10,6 +10,57 @@ interface FilterBarProps {
   isScanning?: boolean;
 }
 
+const US_STATES = [
+  { code: 'all', name: 'All US States' },
+  { code: 'Texas', name: 'Texas (Austin, Dallas, Houston)' },
+  { code: 'California', name: 'California (LA, SF, SD)' },
+  { code: 'New York', name: 'New York (NYC, Brooklyn)' },
+  { code: 'Florida', name: 'Florida (Miami, Orlando, Tampa)' },
+  { code: 'Illinois', name: 'Illinois (Chicago)' },
+  { code: 'Washington', name: 'Washington (Seattle)' },
+  { code: 'Georgia', name: 'Georgia (Atlanta)' },
+  { code: 'Colorado', name: 'Colorado (Denver)' },
+  { code: 'North Carolina', name: 'North Carolina (Charlotte)' },
+  { code: 'Massachusetts', name: 'Massachusetts (Boston)' },
+  { code: 'Arizona', name: 'Arizona (Phoenix)' },
+  { code: 'Pennsylvania', name: 'Pennsylvania (Philadelphia)' },
+  { code: 'Ohio', name: 'Ohio (Columbus)' },
+  { code: 'Michigan', name: 'Michigan (Detroit)' },
+  { code: 'New Jersey', name: 'New Jersey' },
+  { code: 'Virginia', name: 'Virginia' },
+  { code: 'Tennessee', name: 'Tennessee (Nashville)' },
+  { code: 'Indiana', name: 'Indiana' },
+  { code: 'Missouri', name: 'Missouri' },
+  { code: 'Maryland', name: 'Maryland' },
+  { code: 'Wisconsin', name: 'Wisconsin' },
+  { code: 'Minnesota', name: 'Minnesota' },
+  { code: 'South Carolina', name: 'South Carolina' },
+  { code: 'Alabama', name: 'Alabama' },
+  { code: 'Louisiana', name: 'Louisiana (New Orleans)' },
+  { code: 'Kentucky', name: 'Kentucky' },
+  { code: 'Oregon', name: 'Oregon (Portland)' },
+  { code: 'Oklahoma', name: 'Oklahoma' },
+  { code: 'Connecticut', name: 'Connecticut' },
+  { code: 'Utah', name: 'Utah (Salt Lake City)' },
+  { code: 'Nevada', name: 'Nevada (Las Vegas)' },
+  { code: 'Arkansas', name: 'Arkansas' },
+  { code: 'Mississippi', name: 'Mississippi' },
+  { code: 'Kansas', name: 'Kansas' },
+  { code: 'New Mexico', name: 'New Mexico' },
+  { code: 'Nebraska', name: 'Nebraska' },
+  { code: 'Idaho', name: 'Idaho' },
+  { code: 'Hawaii', name: 'Hawaii' },
+  { code: 'Maine', name: 'Maine' },
+  { code: 'Montana', name: 'Montana' },
+  { code: 'Rhode Island', name: 'Rhode Island' },
+  { code: 'Delaware', name: 'Delaware' },
+  { code: 'South Dakota', name: 'South Dakota' },
+  { code: 'North Dakota', name: 'North Dakota' },
+  { code: 'Alaska', name: 'Alaska' },
+  { code: 'Vermont', name: 'Vermont' },
+  { code: 'Wyoming', name: 'Wyoming' },
+];
+
 const REGION_AREAS: Record<string, string[]> = {
   hyderabad: [
     'All Areas',
@@ -130,14 +181,36 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="bg-transparent text-accent-blue font-bold outline-none cursor-pointer pr-1"
           >
             <option value="all">🌐 Global (All Markets)</option>
-            <option value="texas">🇺🇸 Texas, USA ($2.5k–$5k USD)</option>
-            <option value="london">🇬🇧 London, UK (£2k–£3.5k GBP)</option>
+            <option value="texas">🇺🇸 United States (Texas & US States)</option>
+            <option value="london">🇬🇧 London, UK (£2k–£4.5k)</option>
             <option value="hyderabad">🇮🇳 Hyderabad, India (₹35k–₹75k)</option>
           </select>
         </div>
 
+        {/* US 50 States Selector (Active when viewing US or Global) */}
+        {(currentRegion === 'texas' || currentRegion === 'all') && (
+          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-clay-sm shadow-clay-btn border border-clay-border/80 text-xs font-semibold text-slate-700">
+            <span className="text-[11px] font-bold text-blue-600">US State:</span>
+            <select
+              value={filters.us_state || 'all'}
+              onChange={(e) => {
+                const val = e.target.value;
+                onChange({ us_state: val });
+                if (onAreaJump && val === 'Texas') onAreaJump('Austin');
+              }}
+              className="bg-transparent text-clay-text outline-none cursor-pointer pr-1 text-xs"
+            >
+              {US_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Search input with tactile inset shadow */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-clay-faint" />
           <input
             type="text"
@@ -146,6 +219,47 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onChange={(e) => onChange({ search: e.target.value })}
             className="w-full bg-white text-sm text-clay-text pl-10 pr-3.5 py-2 rounded-clay-sm border border-clay-border/90 shadow-clay-pressed focus:outline-none focus:ring-2 focus:ring-accent-blue/20 focus:border-accent-blue placeholder:text-clay-faint transition"
           />
+        </div>
+
+        {/* Dedicated Website Status Dropdown */}
+        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-clay-sm shadow-clay-btn border border-clay-border/80 text-xs font-medium">
+          <span className="text-[11px] font-bold text-rose-600">Website:</span>
+          <select
+            value={filters.has_website || (filters.missing_website_only ? 'no' : 'all')}
+            onChange={(e) => {
+              const val = e.target.value as 'all' | 'yes' | 'no';
+              onChange({
+                has_website: val,
+                missing_website_only: val === 'no',
+              });
+            }}
+            className="bg-transparent text-clay-text outline-none cursor-pointer pr-1 font-semibold"
+          >
+            <option value="all">Website: All</option>
+            <option value="no">🔥 Missing Website Only</option>
+            <option value="yes">✅ Has Website</option>
+          </select>
+        </div>
+
+        {/* Dedicated Instagram Status Dropdown */}
+        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-clay-sm shadow-clay-btn border border-clay-border/80 text-xs font-medium">
+          <span className="text-[11px] font-bold text-purple-600">Instagram:</span>
+          <select
+            value={filters.instagram_filter || (filters.low_social_only ? 'low_followers' : 'all')}
+            onChange={(e) => {
+              const val = e.target.value as RadarFilterState['instagram_filter'];
+              onChange({
+                instagram_filter: val,
+                low_social_only: val === 'low_followers',
+              });
+            }}
+            className="bg-transparent text-clay-text outline-none cursor-pointer pr-1 font-semibold"
+          >
+            <option value="all">Instagram: All</option>
+            <option value="low_followers">📉 Low Social (&lt;500 Followers)</option>
+            <option value="no_instagram">🚫 No IG Profile Found</option>
+            <option value="dormant_posts">⏳ Dormant Feed (&lt;=5 Posts)</option>
+          </select>
         </div>
 
         {/* Dynamic Area dropdown */}

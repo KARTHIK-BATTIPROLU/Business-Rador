@@ -165,7 +165,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({
         clusterRadius: 45,
       });
 
-      // Cluster circle layer — Tactile clay bubbles
+      // Cluster circle layer — Bangalore Startup Map inspired density bubbles
       map.addLayer({
         id: 'clusters',
         type: 'circle',
@@ -175,18 +175,18 @@ export const RadarMap: React.FC<RadarMapProps> = ({
           'circle-color': [
             'step',
             ['get', 'point_count'],
-            '#2563EB', // < 5: Sapphire
-            5,
-            '#059669', // 5-15: Emerald
-            15,
-            '#D97706', // 15-30: Amber
+            '#10B981', // < 10: Emerald Green (bangalorestartupmap style)
+            10,
+            '#F59E0B', // 10-30: Warm Amber
             30,
-            '#E11D48', // 30+: Rose
+            '#F97316', // 30-80: Sunset Orange
+            80,
+            '#EF4444', // 80+: Crimson
           ],
-          'circle-radius': ['step', ['get', 'point_count'], 16, 5, 22, 15, 28, 30, 34],
-          'circle-stroke-width': 3,
+          'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 30, 30, 80, 36],
+          'circle-stroke-width': 3.5,
           'circle-stroke-color': '#FFFFFF',
-          'circle-opacity': 0.92,
+          'circle-opacity': 0.95,
         },
       });
 
@@ -198,7 +198,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({
         filter: ['has', 'point_count'],
         layout: {
           'text-field': '{point_count_abbreviated}',
-          'text-size': 12,
+          'text-size': 13,
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
         },
         paint: {

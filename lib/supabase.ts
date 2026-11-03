@@ -56,25 +56,53 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
   // Fallback to local memory store
   let res = localBusinesses.map((b) => enrichBusinessWithMedia(b));
 
-  // Region filter (Hyderabad, Texas USA, London UK)
+  // Region / Country filter (Hyderabad, Texas USA, London UK)
   if (filters.region && filters.region !== 'all') {
     if (filters.region === 'hyderabad') {
       res = res.filter((b) => b.city?.toLowerCase() === 'hyderabad' || b.country?.toLowerCase() === 'india' || !b.country);
     } else if (filters.region === 'texas') {
-      res = res.filter((b) => b.state?.toLowerCase() === 'texas' || ['austin', 'dallas', 'houston', 'san antonio'].includes(b.city?.toLowerCase()));
+      res = res.filter((b) => b.state?.toLowerCase() === 'texas' || ['austin', 'dallas', 'houston', 'san antonio', 'fort worth'].includes(b.city?.toLowerCase()));
     } else if (filters.region === 'london') {
       res = res.filter((b) => b.city?.toLowerCase() === 'london' || b.country?.toLowerCase() === 'uk');
     }
   }
 
-  // Store Leads inspired negative filter: Missing Website Only
-  if (filters.missing_website_only) {
-    res = res.filter((b) => !b.website);
+  // Country filter
+  if (filters.country && filters.country !== 'all') {
+    const c = filters.country.toLowerCase();
+    if (c === 'usa') {
+      res = res.filter((b) => b.country?.toLowerCase() === 'usa' || b.state?.toLowerCase() === 'texas');
+    } else if (c === 'uk') {
+      res = res.filter((b) => b.country?.toLowerCase() === 'uk' || b.city?.toLowerCase() === 'london');
+    } else if (c === 'india') {
+      res = res.filter((b) => b.country?.toLowerCase() === 'india' || b.city?.toLowerCase() === 'hyderabad');
+    }
   }
 
-  // Low Instagram follower filter (< 500 followers)
-  if (filters.low_social_only) {
+  // US State filter
+  if (filters.us_state && filters.us_state !== 'all') {
+    const st = filters.us_state.toLowerCase();
+    res = res.filter((b) => {
+      const bState = (b.state || '').toLowerCase();
+      const bArea = (b.area || '').toLowerCase();
+      return bState === st || bState.includes(st) || bArea.includes(st);
+    });
+  }
+
+  // Dedicated Website filter & Missing Website Only
+  if (filters.has_website === 'no' || filters.missing_website_only) {
+    res = res.filter((b) => !b.website);
+  } else if (filters.has_website === 'yes') {
+    res = res.filter((b) => Boolean(b.website));
+  }
+
+  // Dedicated Instagram filter & Low Social Only
+  if (filters.instagram_filter === 'low_followers' || filters.low_social_only) {
     res = res.filter((b) => (b.instagram_followers ?? 0) < 500);
+  } else if (filters.instagram_filter === 'no_instagram') {
+    res = res.filter((b) => !b.instagram_handle || b.instagram_verified === false);
+  } else if (filters.instagram_filter === 'dormant_posts') {
+    res = res.filter((b) => (b.instagram_post_count ?? 0) <= 5);
   }
 
   if (filters.area && filters.area !== 'all') {
@@ -196,6 +224,44 @@ export async function fetchBusinessById(id: string): Promise<Business | null> {
   const found = localBusinesses.find((b) => b.id === id);
   if (found) {
     return enrichBusinessWithMedia(found);
+  }
+  return null;
+}
+
+export async function updateBusinessEnrichment(
+  id: string,
+  updates: Partial<Business>
+): Promise<Business | null> {
+  const idx = localBusinesses.findIndex((b) => b.id === id);
+  if (idx !== -1) {
+    localBusinesses[idx] = {
+      ...localBusinesses[idx],
+      ...updates,
+      is_enriched: true,
+      last_enriched_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('businesses')
+          .update({
+            phone: updates.phone ?? localBusinesses[idx].phone,
+            whatsapp: updates.whatsapp ?? localBusinesses[idx].whatsapp,
+            email: updates.email ?? localBusinesses[idx].email,
+            website: updates.website ?? localBusinesses[idx].website,
+            instagram_handle: updates.instagram_handle ?? localBusinesses[idx].instagram_handle,
+            instagram_followers: updates.instagram_followers ?? localBusinesses[idx].instagram_followers,
+            instagram_post_count: updates.instagram_post_count ?? localBusinesses[idx].instagram_post_count,
+            instagram_url: updates.instagram_url ?? localBusinesses[idx].instagram_url,
+          })
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Supabase enrichment sync error:', e);
+      }
+    }
+
+    return localBusinesses[idx];
   }
   return null;
 }

@@ -51,6 +51,30 @@ export default function BusinessDetailsPage() {
   const [notes, setNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichMeta, setEnrichMeta] = useState<{ status?: string; verified?: boolean } | null>(null);
+
+  const triggerLiveEnrichment = async (force: boolean = false) => {
+    if (!businessId || isEnriching) return;
+    setIsEnriching(true);
+    try {
+      const res = await fetch(`/api/businesses/${businessId}/enrich${force ? '?force=true' : ''}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success && data.business) {
+        setBusiness(data.business);
+        setEnrichMeta({
+          status: data.enrichment_meta?.instagram_status,
+          verified: data.enrichment_meta?.instagram_verified,
+        });
+      }
+    } catch (err) {
+      console.warn('Live enrichment error:', err);
+    } finally {
+      setIsEnriching(false);
+    }
+  };
 
   useEffect(() => {
     if (!businessId) return;
@@ -64,6 +88,10 @@ export default function BusinessDetailsPage() {
         if (data.success && data.business) {
           setBusiness(data.business);
           setNotes(data.business.outreach_notes || '');
+          // Trigger JIT live enrichment if not yet enriched
+          if (!data.business.is_enriched) {
+            triggerLiveEnrichment(false);
+          }
         } else {
           setError(data.error || 'Business not found');
         }
@@ -150,10 +178,16 @@ export default function BusinessDetailsPage() {
     );
   }
 
-  // Gallery aggregation
-  const googlePhotos = business.dossier?.google_photos || [];
-  const instagramPosts = business.dossier?.instagram_posts || [];
-  const allMedia: MediaPhoto[] = [...googlePhotos, ...instagramPosts];
+  // Gallery aggregation (prioritizing live-enriched photos)
+  const googlePhotos = (business.google_photos && business.google_photos.length > 0)
+    ? business.google_photos
+    : (business.dossier?.google_photos || []);
+  const instagramPosts = (business.instagram_posts && business.instagram_posts.length > 0)
+    ? business.instagram_posts
+    : (business.dossier?.instagram_posts || []);
+  const allMedia: MediaPhoto[] = (business.media_photos && business.media_photos.length > 0)
+    ? business.media_photos
+    : [...googlePhotos, ...instagramPosts];
 
   const displayedMedia =
     activeMediaTab === 'google'
@@ -256,6 +290,17 @@ Business Radar Partner Team`;
 
         {/* Quick Actions in Header */}
         <div className="flex items-center gap-2">
+          {/* Live JIT Enrichment Trigger */}
+          <button
+            onClick={() => triggerLiveEnrichment(true)}
+            disabled={isEnriching}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-accent-blue border border-blue-200/80 font-bold text-xs shadow-clay-btn transition disabled:opacity-50"
+            title="Scan live Google Places & Instagram to pull authentic photos and verified handles"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isEnriching ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isEnriching ? 'Searching Live...' : '⚡ Live Enrich Visuals'}</span>
+          </button>
+
           {business.whatsapp && (
             <a
               href={`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(whatsappPitchText)}`}
@@ -327,38 +372,53 @@ Business Radar Partner Team`;
             <div className="flex items-center gap-3 text-xs text-clay-muted flex-wrap font-medium pt-1">
               <span className="flex items-center gap-1 text-clay-text">
                 <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                <strong>{business.area}</strong>, Hyderabad
+                <strong>{business.area}</strong>, {business.city} ({business.country || 'USA'})
               </span>
               <span>•</span>
               <span className="flex items-center gap-1 font-mono text-slate-600">
                 <Radio className="w-3 h-3 text-accent-blue" />
                 Spotted {new Date(business.first_seen_at).toLocaleDateString()}
               </span>
-              {business.instagram_handle ? (
+
+              {business.is_enriched && (
+                <>
+                  <span>•</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>Live Enriched</span>
+                  </span>
+                </>
+              )}
+
+              {business.instagram_handle && business.instagram_verified ? (
                 <>
                   <span>•</span>
                   <a
-                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
+                    href={business.instagram_url || `https://www.instagram.com/${business.instagram_handle}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
-                    title={`Search ${business.name} posts and stories on Instagram`}
+                    className="flex items-center gap-1 text-pink-700 hover:underline font-semibold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200"
+                    title={`Verified Instagram profile with ${business.instagram_followers || 0} followers`}
                   >
                     <Instagram className="w-3.5 h-3.5" />
-                    <span>Search @{business.instagram_handle} on IG</span>
+                    <span>@{business.instagram_handle} ({business.instagram_followers || 0} followers)</span>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   </a>
                 </>
               ) : (
                 <>
                   <span>•</span>
+                  <span className="flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 text-[11px]">
+                    <Instagram className="w-3.5 h-3.5 text-slate-400" />
+                    <span>No Official IG Account (Pre-launch)</span>
+                  </span>
                   <a
                     href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-pink-700 hover:underline font-semibold"
+                    className="text-[11px] text-pink-700 hover:underline font-semibold"
                   >
-                    <Instagram className="w-3.5 h-3.5" />
-                    <span>Search on IG</span>
+                    Search Meta →
                   </a>
                 </>
               )}
