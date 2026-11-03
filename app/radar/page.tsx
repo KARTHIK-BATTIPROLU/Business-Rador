@@ -96,14 +96,15 @@ export default function RadarPage() {
     }
   };
 
-  const handleManualScan = async (selectedRegion?: string) => {
+  const handleManualScan = async (selectedRegion?: string, selectedArea?: string) => {
     setIsScanning(true);
     const targetRegion = selectedRegion || filters.region || 'all';
-    const targetArea = filters.area !== 'all' ? filters.area : 'all';
+    const targetArea = selectedArea !== undefined ? selectedArea : (filters.area !== 'all' ? filters.area : 'all');
 
     let scanTitle = 'Hyderabad West corridors';
-    if (targetRegion === 'texas') scanTitle = 'Texas Comptroller Open Data (SODA) & Austin/Dallas nodes';
-    else if (targetRegion === 'london') scanTitle = 'London Shoreditch & Soho GPS nodes';
+    if (targetRegion === 'texas') scanTitle = 'Texas Comptroller Open Data (SODA API) across Austin & Dallas';
+    else if (targetRegion === 'london' || targetArea.includes('Shoreditch') || targetArea.includes('Soho')) scanTitle = `London (${targetArea !== 'all' ? targetArea : 'Shoreditch & Soho'}) corridors`;
+    else if (targetRegion === 'all' && targetArea === 'all') scanTitle = 'Global Markets (Texas Permits, London & Hyderabad)';
     else if (targetArea !== 'all') scanTitle = targetArea;
 
     setScanMessage(`📡 Querying live government & GPS nodes across ${scanTitle}...`);
@@ -187,7 +188,7 @@ export default function RadarPage() {
         <div className="flex items-center gap-2.5">
           {/* Prominent Live Radar Scan Button */}
           <button
-            onClick={() => handleManualScan(filters.region)}
+            onClick={() => handleManualScan(filters.region, filters.area)}
             disabled={isScanning}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-clay-sm bg-accent-blue hover:bg-blue-600 text-white font-bold text-xs shadow-clay-card transition active:translate-y-0.5 disabled:opacity-75"
             title="Query physical GPS nodes and live government permit databases"
@@ -196,10 +197,14 @@ export default function RadarPage() {
             <span className="hidden sm:inline">
               {isScanning
                 ? 'Scanning Sources...'
+                : filters.area !== 'all'
+                ? `⚡ Scan ${filters.area} for New Businesses`
                 : filters.region === 'texas'
-                ? '⚡ Scan Texas Permits (SODA API)'
+                ? '⚡ Scan Texas Permits (80+ Leads)'
                 : filters.region === 'london'
-                ? '⚡ Scan London Corridors'
+                ? '⚡ Scan London Corridors (50+ Leads)'
+                : filters.region === 'all'
+                ? '⚡ Scan All Global Markets (100+ Leads)'
                 : '⚡ Scan Hyderabad for New Businesses'}
             </span>
             <span className="sm:hidden">
@@ -264,7 +269,7 @@ export default function RadarPage() {
         filters={filters}
         onChange={(updated) => setFilters((prev) => ({ ...prev, ...updated }))}
         onAreaJump={handleAreaJump}
-        onTriggerScan={() => handleManualScan(filters.area)}
+        onTriggerScan={(region, area) => handleManualScan(region || filters.region, area || filters.area)}
         isScanning={isScanning}
       />
 

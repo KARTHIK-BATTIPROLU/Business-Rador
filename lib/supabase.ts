@@ -78,7 +78,12 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
   }
 
   if (filters.area && filters.area !== 'all') {
-    res = res.filter((b) => b.area.toLowerCase().includes(filters.area.toLowerCase()));
+    const areaLower = filters.area.toLowerCase();
+    res = res.filter(
+      (b) =>
+        b.area.toLowerCase().includes(areaLower) ||
+        (b.city && b.city.toLowerCase().includes(areaLower))
+    );
   }
   if (filters.category && filters.category !== 'all') {
     res = res.filter((b) => b.category.toLowerCase() === filters.category.toLowerCase());

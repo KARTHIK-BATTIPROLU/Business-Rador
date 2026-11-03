@@ -6,7 +6,7 @@ interface FilterBarProps {
   filters: RadarFilterState;
   onChange: (updated: Partial<RadarFilterState>) => void;
   onAreaJump?: (area: string) => void;
-  onTriggerScan?: (region?: string) => void;
+  onTriggerScan?: (region?: string, area?: string) => void;
   isScanning?: boolean;
 }
 
@@ -294,7 +294,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {onTriggerScan && (
           <button
-            onClick={() => onTriggerScan(currentRegion)}
+            onClick={() => onTriggerScan(currentRegion, filters.area)}
             disabled={isScanning}
             className="ml-auto shrink-0 flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-clay-btn transition active:translate-y-0.5 disabled:opacity-75"
           >
@@ -302,11 +302,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <span>
               {isScanning
                 ? 'Scanning Government & GPS...'
+                : filters.area !== 'all'
+                ? `⚡ Scan ${filters.area} for New Leads`
                 : currentRegion === 'texas'
-                ? '⚡ Scan Texas (Comptroller SODA & OSM)'
+                ? '⚡ Scan Texas Permits (80+ Leads)'
                 : currentRegion === 'london'
-                ? '⚡ Scan London (OSM & Companies)'
-                : `⚡ Scan ${filters.area !== 'all' ? filters.area : 'Hyderabad'}`}
+                ? '⚡ Scan London Corridors (50+ Leads)'
+                : '⚡ Scan Global (100+ Leads)'}
             </span>
           </button>
         )}
