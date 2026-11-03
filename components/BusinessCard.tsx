@@ -262,16 +262,43 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             </a>
           )}
 
-          {business.instagram_handle && (
+          {/* Google Maps Exact Location Button */}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`View ${business.name} exact location on Google Maps`}
+            className="px-2 py-1 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
+          >
+            <MapPin className="w-3 h-3 text-rose-500" />
+            <span>Maps</span>
+          </a>
+
+          {business.instagram_handle ? (
             <a
-              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
+              href={
+                business.instagram_url ||
+                (business.instagram_verified !== false
+                  ? `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`
+                  : `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`)
+              }
               target="_blank"
               rel="noopener noreferrer"
-              title={`Search ${business.name} on Instagram`}
+              title={`Open ${business.name} on Instagram`}
               className="px-2 py-1 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
             >
               <Instagram className="w-3 h-3" />
-              <span>Search IG</span>
+              <span>IG</span>
+            </a>
+          ) : (
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Search Google for social footprint"
+              className="px-2 py-1 rounded-clay-sm bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1 text-[11px] font-medium"
+            >
+              <span>No IG</span>
             </a>
           )}
 

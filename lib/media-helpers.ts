@@ -3,10 +3,25 @@ import { Business, BusinessCategory, MediaPhoto, BusinessDossier } from './types
 export function getInstagramSearchUrl(businessName: string, area?: string, handle?: string | null): string {
   // If the handle is an explicit external verified URL, return it
   if (handle?.startsWith('http')) return handle;
-  // Always use Instagram search keyword exploration to prevent dead 404 pages
+  // If handle exists without http, return direct verified profile URL
+  if (handle && !handle.includes(' ') && handle.length > 2) {
+    return `https://www.instagram.com/${handle.replace('@', '')}/`;
+  }
+  // Universal search via Google index to reliably find authentic Instagram accounts and mentions
   const cleanName = businessName.replace(/[^\w\s]/gi, '').trim();
-  const query = `${cleanName} ${area || ''}`.trim();
-  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`;
+  const query = `site:instagram.com "${cleanName}" ${area || ''}`.trim();
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
+export function getGoogleMapsUrl(name: string, area?: string, city?: string, lat?: number, lng?: number): string {
+  if (lat && lng) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
+}
+
+export function getExactCoordinatesMapUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
 }
 
 // Curated high-resolution photo galleries representing real Hyderabad business corridors

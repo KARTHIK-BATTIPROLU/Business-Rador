@@ -313,6 +313,18 @@ Business Radar Partner Team`;
             </a>
           )}
 
+          {/* Google Maps Exact Location Button */}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200/80 font-bold text-xs shadow-clay-btn transition"
+            title="View exact building location on Google Maps"
+          >
+            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden sm:inline">Google Maps</span>
+          </a>
+
           {business.phone && (
             <a
               href={`tel:${business.phone}`}
@@ -413,12 +425,13 @@ Business Radar Partner Team`;
                     <span>No Official IG Account (Pre-launch)</span>
                   </span>
                   <a
-                    href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
+                    href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-pink-700 hover:underline font-semibold"
+                    title="Search Google for authentic social footprint and founder mentions"
                   >
-                    Search Meta →
+                    Search Google for Socials →
                   </a>
                 </>
               )}

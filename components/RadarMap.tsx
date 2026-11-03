@@ -71,9 +71,13 @@ function createPopupHTML(b: Business): string {
     ? `<a href="tel:${b.phone}" style="flex:1;text-align:center;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📞 Call</a>`
     : '';
 
-  const igLink = b.instagram_handle
-    ? `<a href="https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(b.name + ' ' + (b.city || b.area))}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 Search IG</a>`
-    : '';
+  const mapsLink = `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.name + ' ' + (b.area || '') + ' ' + (b.city || ''))}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📍 Maps</a>`;
+
+  const igHref = b.instagram_handle
+    ? (b.instagram_url || `https://www.instagram.com/${b.instagram_handle.replace('@', '')}/`)
+    : `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + b.name + '" ' + (b.city || b.area))}`;
+
+  const igLink = `<a href="${igHref}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 IG</a>`;
 
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px; min-width: 240px; max-width: 290px;">
@@ -94,8 +98,9 @@ function createPopupHTML(b: Business): string {
         ${b.description || 'Newly discovered commercial business.'}
       </p>
       <div style="display:flex; gap:5px; margin-bottom:8px;">
-        ${waLink}
-        ${igLink || callLink}
+        ${mapsLink}
+        ${waLink || callLink}
+        ${igLink}
       </div>
       <a href="/business/${b.id}" style="display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; background:#2563eb; color:#ffffff; padding:7px 10px; border-radius:7px; font-size:12px; font-weight:700; text-decoration:none; box-shadow:0 2px 4px rgba(37,99,235,0.25);">
         <span>See Details, Dossier & Pitch</span>
