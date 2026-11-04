@@ -179,30 +179,32 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             )}
           </div>
 
-          {/* Instagram Account Age, Followers & Low-Footprint Pill */}
-          {(business.instagram_post_count !== undefined || business.instagram_followers !== undefined || business.instagram_first_post_at) && (
-            <div className="flex items-center gap-2 flex-wrap pt-0.5">
-              <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
-                <Camera className="w-3 h-3" />
-                <span>
-                  {business.instagram_followers !== undefined && business.instagram_followers !== null && (
+          {/* Instagram Followers / Social Status Pill */}
+          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+            {business.instagram_followers !== null && business.instagram_followers !== undefined ? (
+              <>
+                <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
+                  <Camera className="w-3 h-3" />
+                  <span>
                     <strong className="text-pink-900">{business.instagram_followers} followers</strong>
-                  )}
-                  {business.instagram_post_count !== undefined && business.instagram_post_count !== null && (
-                    <span className="ml-1 text-pink-800">· {business.instagram_post_count} posts</span>
-                  )}
-                  {business.instagram_first_post_at && (
-                    <span className="ml-1 text-pink-600">({formatRecency(business.instagram_first_post_at)})</span>
-                  )}
-                </span>
+                    {business.instagram_post_count !== undefined && business.instagram_post_count !== null && (
+                      <span className="ml-1 text-pink-800">· {business.instagram_post_count} posts</span>
+                    )}
+                  </span>
+                </div>
+                {business.instagram_followers < 500 && (
+                  <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200" title="Low social presence indicates founder is early and actively building brand">
+                    ⚡ Low Social Footprint
+                  </span>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-slate-100/90 px-2 py-0.5 rounded-clay-sm border border-slate-200 font-medium inline-flex">
+                <Camera className="w-3 h-3 text-slate-400" />
+                <span>{business.instagram_handle ? `@${business.instagram_handle}` : 'Social Audit Pending'}</span>
               </div>
-              {(business.instagram_followers ?? 0) < 500 && (
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200" title="Low social presence indicates founder is early and actively building brand">
-                  ⚡ Low Social Footprint
-                </span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Lead Score Badge */}
@@ -262,16 +264,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             </a>
           )}
 
-          {/* Google Maps Exact Location Button */}
+          {/* Google Maps Search Button - Opens Verified Google Place Card */}
           <a
-            href={
-              business.lat && business.lng
-                ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`
-            }
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              business.name + ' ' + (business.area || '') + ' ' + (business.city || '')
+            )}`}
             target="_blank"
             rel="noopener noreferrer"
-            title={`View ${business.name} exact location on Google Maps`}
+            title={`Search ${business.name} on Google Maps`}
             className="px-2 py-1 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
           >
             <MapPin className="w-3 h-3 text-rose-500" />
@@ -298,9 +298,10 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               title="Search Google for social footprint"
-              className="px-2 py-1 rounded-clay-sm bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1 text-[11px] font-medium"
+              className="px-2 py-1 rounded-clay-sm bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1 text-[11px] font-medium"
             >
-              <span>No IG</span>
+              <Instagram className="w-3 h-3 text-slate-400" />
+              <span>Audit IG</span>
             </a>
           )}
 

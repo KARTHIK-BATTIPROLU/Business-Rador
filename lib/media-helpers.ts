@@ -13,10 +13,7 @@ export function getInstagramSearchUrl(businessName: string, area?: string, handl
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
-export function getGoogleMapsUrl(name: string, area?: string, city?: string, lat?: number, lng?: number): string {
-  if (lat && lng) {
-    return `https://www.google.com/maps?q=${lat},${lng}`;
-  }
+export function getGoogleMapsUrl(name: string, area?: string, city?: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
 }
 

@@ -313,17 +313,15 @@ Business Radar Partner Team`;
             </a>
           )}
 
-          {/* Google Maps Exact Location Button */}
+          {/* Google Maps Search Button - Opens Verified Google Place Card */}
           <a
-            href={
-              business.lat && business.lng
-                ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`
-            }
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              business.name + ' ' + (business.area || '') + ' ' + (business.city || '')
+            )}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200/80 font-bold text-xs shadow-clay-btn transition"
-            title="View exact building location on Google Maps"
+            title="Search verified business place on Google Maps"
           >
             <MapPin className="w-3.5 h-3.5 text-rose-500" />
             <span className="hidden sm:inline">Google Maps</span>
