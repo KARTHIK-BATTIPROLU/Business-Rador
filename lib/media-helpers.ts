@@ -15,7 +15,7 @@ export function getInstagramSearchUrl(businessName: string, area?: string, handl
 
 export function getGoogleMapsUrl(name: string, area?: string, city?: string, lat?: number, lng?: number): string {
   if (lat && lng) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
+    return `https://www.google.com/maps?q=${lat},${lng}`;
   }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
 }
@@ -258,198 +258,178 @@ export function enrichBusinessWithMedia(b: Business): Business {
   let instagramPosts: MediaPhoto[] = meta.instagram_posts.map((p, idx) => ({
     ...p,
     id: `igpost-${b.id}-${idx}`,
-    caption: p.caption.replace('{name}', b.name).replace('{area}', b.area),
+    caption: p.caption
+      .replace('{name}', b.name)
+      .replace('{area}', b.area)
+      .replace(/Hyderabad/g, b.city || b.area || 'local area'),
   }));
 
-  // Custom high-fidelity photos for BakeOasis
-  if (b.id === 'hyd-010' || b.name.includes('BakeOasis')) {
+  // Custom high-fidelity photos for Only The Wild Ones (Austin, TX)
+  if (b.name.includes('Wild Ones') || b.id === 'tx-sc-001') {
     googlePhotos = [
       {
-        id: 'bakeoasis-1',
+        id: 'wildones-1',
         source: 'storefront',
         url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-        caption: 'BakeOasis facade under fit-out in Financial District',
+        caption: 'Only The Wild Ones wine bar facade on South Congress Ave',
         type: 'facade',
       },
       {
-        id: 'bakeoasis-2',
+        id: 'wildones-2',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Artisan French pastry counter and marble displays',
+        url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Natural low-intervention wine cellar and curated bottles',
         type: 'interior',
       },
       {
-        id: 'bakeoasis-3',
+        id: 'wildones-3',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Signature macarons & viennoiserie selection',
+        url: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=1200&q=80',
+        caption: 'South Congress outdoor patio seating & tapas',
         type: 'product',
-      },
-      {
-        id: 'bakeoasis-4',
-        source: 'google',
-        url: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Specialty espresso extraction bar',
-        type: 'interior',
       },
     ];
 
     instagramPosts = [
       {
-        id: 'bakeoasis-ig-1',
+        id: 'wildones-ig-1',
         source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1517433670267-08bbd4be890f?auto=format&fit=crop&w=800&q=80',
-        caption: 'Fit-out countdown! Our ovens are installed in Financial District. Opening early November 🥐✨ Stay tuned for grand opening dates!',
+        url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80',
+        caption: 'Pouring natural low-intervention wines and small plates on SoCo. Join us for aperitivo hour 🍷✨',
         type: 'post',
-        likes: 95,
+        likes: 215,
         comments: 18,
         posted_at: '2 days ago',
       },
       {
-        id: 'bakeoasis-ig-2',
+        id: 'wildones-ig-2',
         source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=800&q=80',
-        caption: 'Behind the recipe: testing our 72-hour laminated butter croissants. Butter imported from Normandy 🇫🇷',
+        url: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=800&q=80',
+        caption: 'Late night on South Congress. Walk-ins always welcome for natural wines & conservas 🌙',
         type: 'post',
-        likes: 82,
-        comments: 12,
+        likes: 180,
+        comments: 14,
         posted_at: '4 days ago',
       },
     ];
   }
 
-  // Custom high-fidelity photos for BrewCrafters
-  if (b.id === 'hyd-001' || b.name.includes('BrewCrafters')) {
+  // Custom high-fidelity photos for Jolene Redchurch Street (London, UK)
+  if (b.name.includes('Jolene') || b.id === 'ldn-sh-001') {
     googlePhotos = [
       {
-        id: 'brewcrafters-1',
+        id: 'jolene-1',
         source: 'storefront',
-        url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80',
-        caption: 'BrewCrafters modern facade near Kokapet SEZ',
+        url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Jolene bakery storefront at 16 Redchurch St, Shoreditch',
         type: 'facade',
       },
       {
-        id: 'brewcrafters-2',
+        id: 'jolene-2',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Boba tea preparation & nitro cold brew tap station',
+        url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Pastry counter with daily bakes and regeneratively farmed sourdough',
         type: 'interior',
       },
       {
-        id: 'brewcrafters-3',
+        id: 'jolene-3',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Artisan matcha boba & specialty cold brews',
+        url: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Specialty espresso extraction bar in Shoreditch',
         type: 'product',
       },
     ];
 
     instagramPosts = [
       {
-        id: 'brewcrafters-ig-1',
+        id: 'jolene-ig-1',
         source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=800&q=80',
-        caption: 'Launched last weekend in Kokapet! Thank you to the 400+ techies who dropped by for matcha & boba ☕🧋',
+        url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+        caption: 'Fresh morning buns out of the oven on Redchurch St. Baked with wild-farmed heritage grains 🌾☕',
         type: 'post',
-        likes: 210,
-        comments: 29,
-        posted_at: '3 days ago',
-      },
-      {
-        id: 'brewcrafters-ig-2',
-        source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
-        caption: 'Cold brew bottles prepped and chilled for tomorrow morning commuters. Grab yours at our Kokapet drive-through!',
-        type: 'post',
-        likes: 165,
-        comments: 14,
-        posted_at: '5 days ago',
+        likes: 340,
+        comments: 32,
+        posted_at: '1 day ago',
       },
     ];
   }
 
-  // Custom high-fidelity photos for Matcha & Co.
-  if (b.id === 'hyd-004' || b.name.includes('Matcha & Co')) {
+  // Custom high-fidelity photos for Cu2 Brewhouse (Kokapet, Hyderabad)
+  if (b.name.includes('Cu2') || b.id === 'hyd-ko-001') {
     googlePhotos = [
       {
-        id: 'matcha-1',
+        id: 'cu2-1',
         source: 'storefront',
-        url: 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Zen minimalist storefront in Gachibowli near DLF',
+        url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Cu2 Brewhouse modern facade at One Golden Mile, Kokapet',
         type: 'facade',
       },
       {
-        id: 'matcha-2',
+        id: 'cu2-2',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Ceremonial matcha tea whisking bar and seating',
+        url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Craft microbrewery tanks and open rooftop terrace',
         type: 'interior',
       },
       {
-        id: 'matcha-3',
+        id: 'cu2-3',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1515823662972-da6a2e4d3002?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Uji matcha lattes and gluten-free desserts',
+        url: 'https://images.unsplash.com/photo-1538488881523-298f007c6f0c?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Signature craft beer flight and chef plates',
         type: 'product',
       },
     ];
 
     instagramPosts = [
       {
-        id: 'matcha-ig-1',
+        id: 'cu2-ig-1',
         source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1515823662972-da6a2e4d3002?auto=format&fit=crop&w=800&q=80',
-        caption: 'Grand opening Day 2 in Gachibowli! 🍵 Pure Ceremonial grade matcha whisked fresh. No artificial sweet syrups.',
+        url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+        caption: 'Fresh craft batches on tap in Kokapet! Come experience the skyline view at One Golden Mile 🍻✨',
         type: 'post',
-        likes: 178,
-        comments: 24,
+        likes: 290,
+        comments: 38,
         posted_at: '2 days ago',
       },
     ];
   }
 
-  // Custom high-fidelity photos for Kavya Organic Bakery
-  if (b.id === 'hyd-007' || b.name.includes('Kavya Organic')) {
+  // Custom high-fidelity photos for Conçu Patisserie (Hyderabad)
+  if (b.name.includes('Conçu') || b.name.includes('Concu') || b.id === 'hyd-fd-001') {
     googlePhotos = [
       {
-        id: 'kavya-1',
+        id: 'concu-1',
         source: 'storefront',
-        url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Rustic bakery entrance in Kokapet with daily bread board',
+        url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Conçu artisanal patisserie salon and terrace',
         type: 'facade',
       },
       {
-        id: 'kavya-2',
+        id: 'concu-2',
         source: 'google',
-        url: 'https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Freshly baked sourdough boules and millet loaves',
+        url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
+        caption: 'Viennoiserie counter, entremets, and signature macarons',
         type: 'product',
-      },
-      {
-        id: 'kavya-3',
-        source: 'google',
-        url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-        caption: 'Sunlit cafe seating with natural wood tables',
-        type: 'interior',
       },
     ];
 
     instagramPosts = [
       {
-        id: 'kavya-ig-1',
+        id: 'concu-ig-1',
         source: 'instagram',
-        url: 'https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?auto=format&fit=crop&w=800&q=80',
-        caption: 'Opened 1 week ago in Kokapet! 48-hr slow fermented organic sourdough, zero chemicals. Visit us this weekend 🌾',
+        url: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=800&q=80',
+        caption: 'Handcrafted French entremets and pure butter croissants. Prepared daily in our atelier 🥐✨',
         type: 'post',
-        likes: 135,
-        comments: 17,
-        posted_at: '3 days ago',
+        likes: 410,
+        comments: 42,
+        posted_at: '2 days ago',
       },
     ];
   }
 
   const isUS = b.country === 'USA' || b.state === 'Texas' || ['Austin', 'Dallas', 'Houston', 'San Antonio'].includes(b.city);
   const isUK = b.country === 'UK' || b.city === 'London';
+  const locName = b.city || b.area || 'local area';
 
   let verifiedAddress = b.dossier?.verified_address;
   if (!verifiedAddress) {
@@ -482,20 +462,47 @@ export function enrichBusinessWithMedia(b: Business): Business {
 
   const priceTier = isUS ? '$$$ (Premium / High-Ticket)' : isUK ? '££ (Moderate / Premium)' : '₹₹ (Moderate)';
 
+  const localizedBio = meta.instagram_bio.replace(/Hyderabad/g, locName);
+  const localizedOpportunities = meta.opportunities.map((opp) => {
+    if (isUS) {
+      return opp
+        .replace(/Swiggy\/Zomato/g, 'DoorDash/UberEats')
+        .replace(/Gachibowli/g, b.area || 'downtown')
+        .replace(/₹5k - ₹50k/g, '$150 - $1,500');
+    }
+    if (isUK) {
+      return opp
+        .replace(/Swiggy\/Zomato/g, 'Deliveroo/UberEats')
+        .replace(/Gachibowli/g, b.area || 'central')
+        .replace(/₹5k - ₹50k/g, '£100 - £1,000');
+    }
+    return opp;
+  });
+
+  const localizedPitch = meta.pitch_template
+    .replace('{name}', b.name)
+    .replace('{area}', b.area)
+    .replace(/Hyderabad/g, locName);
+
   const dossier: BusinessDossier = {
     verified_address: verifiedAddress,
     hours: 'Monday - Sunday: 08:30 AM - 10:30 PM',
     price_tier: priceTier,
-    google_rating: b.id === 'hyd-010' || b.id === 'tx-005' ? 0 : 4.8,
-    google_reviews_count: b.id === 'hyd-010' || b.id === 'tx-005' ? 0 : Math.floor(Math.random() * 20) + 3,
-    instagram_bio: meta.instagram_bio,
-    growth_opportunities: meta.opportunities,
-    suggested_pitch: meta.pitch_template.replace('{name}', b.name).replace('{area}', b.area),
+    google_rating: 4.8,
+    google_reviews_count: Math.floor(Math.random() * 25) + 12,
+    instagram_bio: localizedBio,
+    growth_opportunities: localizedOpportunities,
+    suggested_pitch: localizedPitch,
     whatsapp_pitch: whatsappPitch,
     cold_call_script: coldCallScript,
     cold_email_pitch: coldEmailPitch,
     google_photos: googlePhotos,
     instagram_posts: instagramPosts,
+  };
+
+  return {
+    ...b,
+    dossier,
   };
 
   return {

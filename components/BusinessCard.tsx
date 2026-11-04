@@ -264,7 +264,11 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
 
           {/* Google Maps Exact Location Button */}
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`}
+            href={
+              business.lat && business.lng
+                ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             title={`View ${business.name} exact location on Google Maps`}
@@ -278,9 +282,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             <a
               href={
                 business.instagram_url ||
-                (business.instagram_verified !== false
-                  ? `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`
-                  : `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`)
+                `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`
               }
               target="_blank"
               rel="noopener noreferrer"
@@ -292,7 +294,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             </a>
           ) : (
             <a
-              href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`}
+              href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" "' + (business.city || business.area) + '"')}`}
               target="_blank"
               rel="noopener noreferrer"
               title="Search Google for social footprint"

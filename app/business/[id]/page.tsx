@@ -315,7 +315,11 @@ Business Radar Partner Team`;
 
           {/* Google Maps Exact Location Button */}
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`}
+            href={
+              business.lat && business.lng
+                ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.area || '') + ' ' + (business.city || ''))}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200/80 font-bold text-xs shadow-clay-btn transition"
@@ -402,19 +406,22 @@ Business Radar Partner Team`;
                 </>
               )}
 
-              {business.instagram_handle && business.instagram_verified ? (
+              {business.instagram_handle && business.instagram_verified !== false ? (
                 <>
                   <span>•</span>
                   <a
-                    href={business.instagram_url || `https://www.instagram.com/${business.instagram_handle}/`}
+                    href={
+                      business.instagram_url ||
+                      `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-700 hover:underline font-semibold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200"
-                    title={`Verified Instagram profile with ${business.instagram_followers || 0} followers`}
+                    title={`Instagram profile with ${business.instagram_followers || 0} followers`}
                   >
                     <Instagram className="w-3.5 h-3.5" />
-                    <span>@{business.instagram_handle} ({business.instagram_followers || 0} followers)</span>
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>@{business.instagram_handle.replace('@', '')} ({business.instagram_followers || 0} followers)</span>
+                    {business.instagram_verified && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
                   </a>
                 </>
               ) : (
@@ -425,7 +432,7 @@ Business Radar Partner Team`;
                     <span>No Official IG Account (Pre-launch)</span>
                   </span>
                   <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area))}`}
+                    href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" "' + (business.city || business.area) + '"')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-pink-700 hover:underline font-semibold"
@@ -674,7 +681,11 @@ Business Radar Partner Team`;
             </a>
 
             <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area} ${business.city || ''}`)}`}
+              href={
+                business.lat && business.lng
+                  ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area} ${business.city || ''}`)}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border shadow-clay-btn transition"
@@ -685,13 +696,21 @@ Business Radar Partner Team`;
             </a>
 
             <a
-              href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(business.name + ' ' + (business.city || business.area))}`}
+              href={
+                business.instagram_handle
+                  ? `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`
+                  : `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" "' + (business.city || business.area) + '"')}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn transition font-semibold"
             >
               <Instagram className="w-3.5 h-3.5" />
-              <span>Search &ldquo;{business.name}&rdquo; on Instagram</span>
+              <span>
+                {business.instagram_handle
+                  ? `Instagram: @${business.instagram_handle.replace('@', '')}`
+                  : `Search “${business.name}” on Instagram`}
+              </span>
               <ExternalLink className="w-3 h-3 text-pink-400" />
             </a>
           </div>

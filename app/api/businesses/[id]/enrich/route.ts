@@ -353,9 +353,9 @@ export async function POST(
           updatedPostCount = discovered.postCount;
           instagramVerified = true;
         } else {
-          // No live profile exists on Instagram: accurately clear handle so no 404!
-          updatedInstagramHandle = null;
-          updatedInstagramUrl = null;
+          // Meta scraper could not verify via unauthenticated probe:
+          // Retain existing handle intact, flag as unverified, and provide direct profile URL
+          updatedInstagramUrl = business.instagram_url || `https://www.instagram.com/${business.instagram_handle.replace('@', '')}/`;
           instagramVerified = false;
         }
       }
