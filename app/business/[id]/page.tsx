@@ -93,10 +93,39 @@ export default function BusinessDetailsPage() {
             triggerLiveEnrichment(false);
           }
         } else {
-          setError(data.error || 'Business not found');
+          // Check local cached businesses from radar scan
+          let foundInCache: Business | null = null;
+          try {
+            const cached = localStorage.getItem('radar_cached_businesses');
+            if (cached) {
+              const list: Business[] = JSON.parse(cached);
+              foundInCache = list.find((b) => b.id === businessId) || null;
+            }
+          } catch {}
+
+          if (foundInCache) {
+            setBusiness(foundInCache);
+            setNotes(foundInCache.outreach_notes || '');
+          } else {
+            setError(data.error || 'Business not found');
+          }
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to load business dossier');
+        let foundInCache: Business | null = null;
+        try {
+          const cached = localStorage.getItem('radar_cached_businesses');
+          if (cached) {
+            const list: Business[] = JSON.parse(cached);
+            foundInCache = list.find((b) => b.id === businessId) || null;
+          }
+        } catch {}
+
+        if (foundInCache) {
+          setBusiness(foundInCache);
+          setNotes(foundInCache.outreach_notes || '');
+        } else {
+          setError(err.message || 'Failed to load business dossier');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -679,17 +708,13 @@ Business Radar Partner Team`;
             </a>
 
             <a
-              href={
-                business.lat && business.lng
-                  ? `https://www.google.com/maps?q=${business.lat},${business.lng}`
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area} ${business.city || ''}`)}`
-              }
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.name} ${business.area || ''} ${business.city || ''}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border shadow-clay-btn transition"
             >
               <Navigation className="w-3.5 h-3.5 text-rose-500" />
-              <span>View Location on Google Maps</span>
+              <span>View Place on Google Maps</span>
               <ExternalLink className="w-3 h-3 text-clay-faint" />
             </a>
 

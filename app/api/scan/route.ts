@@ -93,12 +93,21 @@ async function queryOverpassWithFallback(query: string): Promise<any[]> {
 }
 
 // Live Texas Comptroller Open Data (SODA API) Scanner — Ultra-Fast (200ms)
-async function scanTexasComptroller(limit = 40): Promise<Business[]> {
+async function scanTexasComptroller(limit = 45, specificCity?: string): Promise<Business[]> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    const url = `https://data.texas.gov/resource/jrea-zgmq.json?$limit=${limit}&$order=outlet_permit_issue_date DESC&$where=outlet_permit_issue_date IS NOT NULL AND outlet_city IN('AUSTIN','DALLAS','HOUSTON','SAN ANTONIO','FORT WORTH') AND outlet_naics_code IN ('722511','722513','722515','812112','812113','448120','448110','713940','812111','445110')`;
+    let cityClause = "outlet_city IN('AUSTIN','DALLAS','HOUSTON','SAN ANTONIO','FORT WORTH')";
+    if (specificCity) {
+      cityClause = `outlet_city='${specificCity.toUpperCase()}'`;
+    }
+
+    const whereClause = encodeURIComponent(
+      `outlet_permit_issue_date IS NOT NULL AND ${cityClause} AND outlet_naics_code IN ('722511','722513','722515','812112','812113','448120','448110','713940','812111','445110')`
+    );
+    const orderClause = encodeURIComponent('outlet_permit_issue_date DESC');
+    const url = `https://data.texas.gov/resource/jrea-zgmq.json?$limit=${limit}&$order=${orderClause}&$where=${whereClause}`;
 
     const res = await fetch(url, {
       signal: controller.signal,
@@ -214,6 +223,129 @@ async function scanTexasComptroller(limit = 40): Promise<Business[]> {
   }
 }
 
+async function scanLondonOSM(targetArea = 'all'): Promise<Business[]> {
+  try {
+    const grids =
+      targetArea !== 'all' && LONDON_SCAN_GRIDS[targetArea]
+        ? { [targetArea]: LONDON_SCAN_GRIDS[targetArea] }
+        : { Shoreditch: LONDON_SCAN_GRIDS.Shoreditch };
+
+    const results: Business[] = [];
+    const seenOsmIds = new Set<string>();
+
+    for (const [areaName, grid] of Object.entries(grids)) {
+      const overpassQuery = `[out:json][timeout:2];node["amenity"~"restaurant|cafe|bar|pub|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 20;`;
+      const elements = await queryOverpassWithFallback(overpassQuery);
+
+      for (const el of elements) {
+        const tags = el.tags || {};
+        const name = tags.name || tags['name:en'];
+        if (!name || seenOsmIds.has(String(el.id))) continue;
+        seenOsmIds.add(String(el.id));
+
+        const amenity = tags.amenity || 'Food & Beverage';
+        const hasWebsite = Boolean(tags.website || tags['contact:website']);
+
+        results.push({
+          id: `ldn-osm-${el.id}`,
+          osm_id: String(el.id),
+          name: name.trim(),
+          category: 'Food & Beverage',
+          sub_category: amenity.replace('_', ' '),
+          area: areaName,
+          city: 'London',
+          country: 'UK',
+          currency: 'GBP',
+          currency_symbol: '£',
+          estimated_site_budget: '£2,200 – £4,000',
+          lat: el.lat,
+          lng: el.lon,
+          phone: tags.phone || tags['contact:phone'] || null,
+          website: hasWebsite ? (tags.website || tags['contact:website']) : null,
+          instagram_handle: tags['contact:instagram'] || null,
+          instagram_url: null,
+          instagram_followers: null,
+          instagram_post_count: null,
+          actual_launch_date: tags.start_date || tags.opening_date || null,
+          first_seen_at: new Date().toISOString(),
+          source: 'osm',
+          description: `Physical Food & Beverage venue on GPS node in ${areaName}, London.`,
+          grok_summary: !hasWebsite
+            ? `Storefront in ${areaName}. Zero official website detected in OpenStreetMap records.`
+            : `Active London shop in ${areaName}. Has existing site.`,
+          lead_score: !hasWebsite ? 98 : 72,
+          outreach_status: 'new',
+        });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+async function scanHyderabadOSM(targetArea = 'all'): Promise<Business[]> {
+  try {
+    const grids =
+      targetArea !== 'all' && HYDERABAD_SCAN_GRIDS[targetArea]
+        ? { [targetArea]: HYDERABAD_SCAN_GRIDS[targetArea] }
+        : { Kokapet: HYDERABAD_SCAN_GRIDS.Kokapet };
+
+    const results: Business[] = [];
+    const seenOsmIds = new Set<string>();
+
+    for (const [areaName, grid] of Object.entries(grids)) {
+      const overpassQuery = `[out:json][timeout:2];node["amenity"~"restaurant|cafe|fast_food|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 20;`;
+      const elements = await queryOverpassWithFallback(overpassQuery);
+
+      for (const el of elements) {
+        const tags = el.tags || {};
+        const name = tags.name || tags['name:en'];
+        if (!name || seenOsmIds.has(String(el.id))) continue;
+        seenOsmIds.add(String(el.id));
+
+        const amenity = tags.amenity || 'Food & Beverage';
+        const hasWebsite = Boolean(tags.website || tags['contact:website']);
+
+        results.push({
+          id: `osm-${el.id}`,
+          osm_id: String(el.id),
+          name: name.trim(),
+          category: 'Food & Beverage',
+          sub_category: amenity.replace('_', ' '),
+          area: areaName,
+          city: 'Hyderabad',
+          state: 'Telangana',
+          country: 'India',
+          currency: 'INR',
+          currency_symbol: '₹',
+          estimated_site_budget: '₹35,000 – ₹65,000',
+          lat: el.lat,
+          lng: el.lon,
+          phone: tags.phone || tags['contact:phone'] || null,
+          website: hasWebsite ? (tags.website || tags['contact:website']) : null,
+          instagram_handle: tags['contact:instagram'] || null,
+          instagram_url: null,
+          instagram_followers: null,
+          instagram_post_count: null,
+          actual_launch_date: tags.start_date || tags.opening_date || null,
+          first_seen_at: new Date().toISOString(),
+          source: 'osm',
+          description: `Commercial establishment on physical GPS node in ${areaName}, Hyderabad.`,
+          grok_summary: !hasWebsite
+            ? `Storefront indexed in ${areaName}. Zero official website detected — prime agency candidate.`
+            : `Indexed business in ${areaName}. Has existing site.`,
+          lead_score: !hasWebsite ? 98 : 72,
+          outreach_status: 'new',
+        });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     let targetArea = 'all';
@@ -232,7 +364,6 @@ export async function POST(req: NextRequest) {
     if (searchParams.get('region')) region = searchParams.get('region')!;
 
     const discoveredBusinesses: Business[] = [];
-    const seenOsmIds = new Set<string>();
 
     const isTexasRequested =
       region === 'texas' ||
@@ -252,125 +383,39 @@ export async function POST(req: NextRequest) {
       targetArea.includes('Camden') ||
       targetArea.includes('London');
 
-    // 1. LONDON SCAN
-    if (isLondonRequested) {
-      const grids =
-        targetArea !== 'all' && LONDON_SCAN_GRIDS[targetArea]
-          ? { [targetArea]: LONDON_SCAN_GRIDS[targetArea] }
-          : { Shoreditch: LONDON_SCAN_GRIDS.Shoreditch };
+    const isGlobal = region === 'all' && targetArea === 'all';
 
-      for (const [areaName, grid] of Object.entries(grids)) {
-        const overpassQuery = `[out:json][timeout:3];node["amenity"~"restaurant|cafe|bar|pub|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 25;`;
-        const elements = await queryOverpassWithFallback(overpassQuery);
+    let specificCity: string | undefined = undefined;
+    if (targetArea.includes('Austin') || targetArea.includes('Congress')) specificCity = 'AUSTIN';
+    else if (targetArea.includes('Dallas') || targetArea.includes('Uptown') || targetArea.includes('Deep Ellum')) specificCity = 'DALLAS';
+    else if (targetArea.includes('Houston') || targetArea.includes('Montrose')) specificCity = 'HOUSTON';
 
-        for (const el of elements) {
-          const tags = el.tags || {};
-          const name = tags.name || tags['name:en'];
-          if (!name || seenOsmIds.has(String(el.id))) continue;
-          seenOsmIds.add(String(el.id));
+    const rawCandidates: Business[] = [];
 
-          const amenity = tags.amenity || 'Food & Beverage';
-          const hasWebsite = Boolean(tags.website || tags['contact:website']);
+    if (isGlobal) {
+      // Parallel fetch across Texas SODA (ultra-fast) + London OSM + Hyderabad OSM
+      const [txRes, ldnRes, hydRes] = await Promise.allSettled([
+        scanTexasComptroller(50),
+        scanLondonOSM('Shoreditch'),
+        scanHyderabadOSM('Kokapet'),
+      ]);
 
-          const newBiz: Business = {
-            id: `ldn-osm-${el.id}`,
-            osm_id: String(el.id),
-            name: name.trim(),
-            category: 'Food & Beverage',
-            sub_category: amenity.replace('_', ' '),
-            area: areaName,
-            city: 'London',
-            country: 'UK',
-            currency: 'GBP',
-            currency_symbol: '£',
-            estimated_site_budget: '£2,200 – £4,000',
-            lat: el.lat,
-            lng: el.lon,
-            phone: tags.phone || tags['contact:phone'] || null,
-            website: hasWebsite ? (tags.website || tags['contact:website']) : null,
-            instagram_handle: tags['contact:instagram'] || null,
-            instagram_url: null,
-            instagram_followers: null,
-            instagram_post_count: null,
-            actual_launch_date: tags.start_date || tags.opening_date || null,
-            first_seen_at: new Date().toISOString(),
-            source: 'osm',
-            description: `Physical Food & Beverage venue on GPS node in ${areaName}, London.`,
-            grok_summary: !hasWebsite
-              ? `Storefront in ${areaName}. Zero official website detected in OpenStreetMap records.`
-              : `Active London shop in ${areaName}. Has existing site.`,
-            lead_score: !hasWebsite ? 98 : 72,
-            outreach_status: 'new',
-          };
-
-          discoveredBusinesses.push(enrichBusinessWithMedia(newBiz));
-        }
-      }
+      if (txRes.status === 'fulfilled') rawCandidates.push(...txRes.value);
+      if (ldnRes.status === 'fulfilled') rawCandidates.push(...ldnRes.value);
+      if (hydRes.status === 'fulfilled') rawCandidates.push(...hydRes.value);
+    } else if (isTexasRequested) {
+      const txLeads = await scanTexasComptroller(45, specificCity);
+      rawCandidates.push(...txLeads);
+    } else if (isLondonRequested) {
+      const ldnLeads = await scanLondonOSM(targetArea);
+      rawCandidates.push(...ldnLeads);
+    } else {
+      const hydLeads = await scanHyderabadOSM(targetArea);
+      rawCandidates.push(...hydLeads);
     }
 
-    // 2. TEXAS LIVE SCAN (High Volume, Instant SODA API)
-    if (isTexasRequested || (region === 'all' && targetArea === 'all')) {
-      const txLeads = await scanTexasComptroller(40);
-      for (const lead of txLeads) {
-        discoveredBusinesses.push(enrichBusinessWithMedia(lead));
-      }
-    }
-
-    // 3. HYDERABAD LIVE SCAN
-    if (region === 'hyderabad' || (region === 'all' && targetArea !== 'all' && !isLondonRequested && !isTexasRequested)) {
-      const grids =
-        targetArea !== 'all' && HYDERABAD_SCAN_GRIDS[targetArea]
-          ? { [targetArea]: HYDERABAD_SCAN_GRIDS[targetArea] }
-          : { Kokapet: HYDERABAD_SCAN_GRIDS.Kokapet };
-
-      for (const [areaName, grid] of Object.entries(grids)) {
-        const overpassQuery = `[out:json][timeout:3];node["amenity"~"restaurant|cafe|fast_food|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 25;`;
-        const elements = await queryOverpassWithFallback(overpassQuery);
-
-        for (const el of elements) {
-          const tags = el.tags || {};
-          const name = tags.name || tags['name:en'];
-          if (!name || seenOsmIds.has(String(el.id))) continue;
-          seenOsmIds.add(String(el.id));
-
-          const amenity = tags.amenity || 'Food & Beverage';
-          const hasWebsite = Boolean(tags.website || tags['contact:website']);
-
-          const newBiz: Business = {
-            id: `osm-${el.id}`,
-            osm_id: String(el.id),
-            name: name.trim(),
-            category: 'Food & Beverage',
-            sub_category: amenity.replace('_', ' '),
-            area: areaName,
-            city: 'Hyderabad',
-            state: 'Telangana',
-            country: 'India',
-            currency: 'INR',
-            currency_symbol: '₹',
-            estimated_site_budget: '₹35,000 – ₹65,000',
-            lat: el.lat,
-            lng: el.lon,
-            phone: tags.phone || tags['contact:phone'] || null,
-            website: hasWebsite ? (tags.website || tags['contact:website']) : null,
-            instagram_handle: tags['contact:instagram'] || null,
-            instagram_url: null,
-            instagram_followers: null,
-            instagram_post_count: null,
-            actual_launch_date: tags.start_date || tags.opening_date || null,
-            first_seen_at: new Date().toISOString(),
-            source: 'osm',
-            description: `Commercial establishment on physical GPS node in ${areaName}, Hyderabad.`,
-            grok_summary: !hasWebsite
-              ? `Storefront indexed in ${areaName}. Zero official website detected — prime agency candidate.`
-              : `Indexed business in ${areaName}. Has existing site.`,
-            lead_score: !hasWebsite ? 98 : 72,
-            outreach_status: 'new',
-          };
-
-          discoveredBusinesses.push(enrichBusinessWithMedia(newBiz));
-        }
-      }
+    for (const lead of rawCandidates) {
+      discoveredBusinesses.push(enrichBusinessWithMedia(lead));
     }
 
     // Upsert to Supabase & memory store
