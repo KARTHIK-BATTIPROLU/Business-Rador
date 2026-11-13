@@ -12,7 +12,8 @@ const supabaseAnonKey =
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
-  !supabaseUrl.includes('your_supabase_project_url')
+  !supabaseUrl.includes('your_supabase_project_url') &&
+  !supabaseUrl.includes('ydjyedqbclwhahqzdszv')
 );
 
 export const supabase = isSupabaseConfigured

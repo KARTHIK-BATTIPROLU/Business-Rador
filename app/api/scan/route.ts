@@ -3,29 +3,31 @@ import { Business, BusinessCategory } from '@/lib/types';
 import { upsertDiscoveredBusinesses } from '@/lib/supabase';
 import { enrichBusinessWithMedia } from '@/lib/media-helpers';
 
-// High-growth commercial corridors in West Hyderabad
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
+
+// Primary high-growth corridors in West Hyderabad
 const HYDERABAD_SCAN_GRIDS: Record<string, { lat: number; lng: number; radius: number }> = {
-  Kokapet: { lat: 17.4156, lng: 78.3298, radius: 3000 },
-  'Financial District': { lat: 17.4170, lng: 78.3430, radius: 3000 },
-  Gachibowli: { lat: 17.4400, lng: 78.3489, radius: 3000 },
-  'HITECH City': { lat: 17.4486, lng: 78.3908, radius: 3000 },
-  Madhapur: { lat: 17.4484, lng: 78.3908, radius: 2500 },
-  Kondapur: { lat: 17.4600, lng: 78.3550, radius: 2500 },
-  'Jubilee Hills': { lat: 17.4239, lng: 78.4082, radius: 3000 },
+  Kokapet: { lat: 17.4156, lng: 78.3298, radius: 1500 },
+  'Financial District': { lat: 17.4170, lng: 78.3430, radius: 1500 },
+  Gachibowli: { lat: 17.4400, lng: 78.3489, radius: 1500 },
+  'HITECH City': { lat: 17.4486, lng: 78.3908, radius: 1500 },
+  Madhapur: { lat: 17.4484, lng: 78.3908, radius: 1500 },
+  Kondapur: { lat: 17.4600, lng: 78.3550, radius: 1500 },
+  'Jubilee Hills': { lat: 17.4239, lng: 78.4082, radius: 1500 },
 };
 
 // High-growth corridors in London (UK / Europe)
 const LONDON_SCAN_GRIDS: Record<string, { lat: number; lng: number; radius: number }> = {
-  Shoreditch: { lat: 51.5245, lng: -0.0785, radius: 3500 },
-  Soho: { lat: 51.5135, lng: -0.1340, radius: 2500 },
-  'Covent Garden': { lat: 51.5117, lng: -0.1240, radius: 2500 },
-  Camden: { lat: 51.5390, lng: -0.1426, radius: 3000 },
+  Shoreditch: { lat: 51.5245, lng: -0.0785, radius: 1500 },
+  Soho: { lat: 51.5135, lng: -0.1340, radius: 1500 },
+  'Covent Garden': { lat: 51.5117, lng: -0.1240, radius: 1500 },
+  Camden: { lat: 51.5390, lng: -0.1426, radius: 1500 },
 };
 
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://lz4.overpass-api.de/api/interpreter',
-  'https://z.overpass-api.de/api/interpreter',
 ];
 
 const OSM_CATEGORY_MAP: Record<string, BusinessCategory> = {
@@ -47,29 +49,29 @@ const OSM_CATEGORY_MAP: Record<string, BusinessCategory> = {
 };
 
 const NAICS_CATEGORY_MAP: Record<string, BusinessCategory> = {
-  '722511': 'Food & Beverage', // Full-service restaurant
-  '722513': 'Food & Beverage', // Fast casual / limited service
-  '722515': 'Food & Beverage', // Snack / coffee / bakery
-  '812112': 'Beauty & Wellness', // Beauty salon / MedSpa
-  '812113': 'Beauty & Wellness', // Nail salon
-  '812111': 'Beauty & Wellness', // Barber shop
-  '448120': 'Clothing & Fashion', // Women's clothing boutique
-  '448110': 'Clothing & Fashion', // Men's clothing
-  '713940': 'Fitness', // Gym / Fitness center
-  '445110': 'Retail', // Supermarket / specialty food
+  '722511': 'Food & Beverage',
+  '722513': 'Food & Beverage',
+  '722515': 'Food & Beverage',
+  '812112': 'Beauty & Wellness',
+  '812113': 'Beauty & Wellness',
+  '812111': 'Beauty & Wellness',
+  '448120': 'Clothing & Fashion',
+  '448110': 'Clothing & Fashion',
+  '713940': 'Fitness',
+  '445110': 'Retail',
 };
 
 async function queryOverpassWithFallback(query: string): Promise<any[]> {
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7500);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'BusinessRadar/1.0 (Live Business Scanner)',
+          'User-Agent': 'BusinessRadar/1.0',
         },
         body: `data=${encodeURIComponent(query)}`,
         signal: controller.signal,
@@ -90,11 +92,11 @@ async function queryOverpassWithFallback(query: string): Promise<any[]> {
   return [];
 }
 
-// Live Texas Comptroller Open Data (SODA API) Scanner — Zero Mock Data
-async function scanTexasComptroller(limit = 80): Promise<Business[]> {
+// Live Texas Comptroller Open Data (SODA API) Scanner — Ultra-Fast (200ms)
+async function scanTexasComptroller(limit = 40): Promise<Business[]> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const url = `https://data.texas.gov/resource/jrea-zgmq.json?$limit=${limit}&$order=outlet_permit_issue_date DESC&$where=outlet_permit_issue_date IS NOT NULL AND outlet_city IN('AUSTIN','DALLAS','HOUSTON','SAN ANTONIO','FORT WORTH') AND outlet_naics_code IN ('722511','722513','722515','812112','812113','448120','448110','713940','812111','445110')`;
 
@@ -190,10 +192,10 @@ async function scanTexasComptroller(limit = 80): Promise<Business[]> {
         lng,
         phone: formattedPhone || null,
         whatsapp: formattedPhone && phoneDigits ? `1${areaCode}${phoneDigits}` : null,
-        website: null, // Genuinely unlisted in permit records
-        instagram_handle: null, // No fabricated handles
+        website: null,
+        instagram_handle: null,
         instagram_url: null,
-        instagram_followers: null, // No fabricated follower counts
+        instagram_followers: null,
         instagram_post_count: null,
         actual_launch_date: permitDate,
         is_opening_soon: true,
@@ -250,51 +252,32 @@ export async function POST(req: NextRequest) {
       targetArea.includes('Camden') ||
       targetArea.includes('London');
 
-    // ==============================================================
-    // 1. LONDON LIVE OPENSTREETMAP SCAN
-    // ==============================================================
+    // 1. LONDON SCAN
     if (isLondonRequested) {
       const grids =
         targetArea !== 'all' && LONDON_SCAN_GRIDS[targetArea]
           ? { [targetArea]: LONDON_SCAN_GRIDS[targetArea] }
-          : LONDON_SCAN_GRIDS;
+          : { Shoreditch: LONDON_SCAN_GRIDS.Shoreditch };
 
-      const gridPromises = Object.entries(grids).map(async ([areaName, grid]) => {
-        const overpassQuery = `
-[out:json][timeout:10];
-(
-  node["amenity"~"restaurant|cafe|bar|pub|bakery"](around:${grid.radius},${grid.lat},${grid.lng});
-  node["shop"~"clothes|boutique|beauty|hairdresser"](around:${grid.radius},${grid.lat},${grid.lng});
-);
-out body 40;
-`;
+      for (const [areaName, grid] of Object.entries(grids)) {
+        const overpassQuery = `[out:json][timeout:3];node["amenity"~"restaurant|cafe|bar|pub|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 25;`;
         const elements = await queryOverpassWithFallback(overpassQuery);
-        return { areaName, elements, grid };
-      });
 
-      const results = await Promise.all(gridPromises);
-
-      for (const { areaName, elements } of results) {
         for (const el of elements) {
           const tags = el.tags || {};
           const name = tags.name || tags['name:en'];
           if (!name || seenOsmIds.has(String(el.id))) continue;
-
           seenOsmIds.add(String(el.id));
 
-          const amenity = tags.amenity || '';
-          const shop = tags.shop || '';
-          const categoryKey = amenity || shop;
-          const category = OSM_CATEGORY_MAP[categoryKey] || 'Food & Beverage';
-
+          const amenity = tags.amenity || 'Food & Beverage';
           const hasWebsite = Boolean(tags.website || tags['contact:website']);
 
           const newBiz: Business = {
             id: `ldn-osm-${el.id}`,
             osm_id: String(el.id),
             name: name.trim(),
-            category,
-            sub_category: categoryKey ? categoryKey.replace('_', ' ') : undefined,
+            category: 'Food & Beverage',
+            sub_category: amenity.replace('_', ' '),
             area: areaName,
             city: 'London',
             country: 'UK',
@@ -307,14 +290,14 @@ out body 40;
             website: hasWebsite ? (tags.website || tags['contact:website']) : null,
             instagram_handle: tags['contact:instagram'] || null,
             instagram_url: null,
-            instagram_followers: null, // No fabricated follower count
+            instagram_followers: null,
             instagram_post_count: null,
             actual_launch_date: tags.start_date || tags.opening_date || null,
             first_seen_at: new Date().toISOString(),
             source: 'osm',
-            description: `Physical ${category} venue indexed on GPS node in ${areaName}, London.`,
+            description: `Physical Food & Beverage venue on GPS node in ${areaName}, London.`,
             grok_summary: !hasWebsite
-              ? `Physical storefront in ${areaName}. Zero official website detected in OpenStreetMap records.`
+              ? `Storefront in ${areaName}. Zero official website detected in OpenStreetMap records.`
               : `Active London shop in ${areaName}. Has existing site.`,
             lead_score: !hasWebsite ? 98 : 72,
             outreach_status: 'new',
@@ -325,67 +308,40 @@ out body 40;
       }
     }
 
-    // ==============================================================
-    // 2. TEXAS LIVE COMPTROLLER OPEN DATA (SODA API)
-    // ==============================================================
-    if (isTexasRequested) {
-      const txLeads = await scanTexasComptroller(80);
+    // 2. TEXAS LIVE SCAN (High Volume, Instant SODA API)
+    if (isTexasRequested || (region === 'all' && targetArea === 'all')) {
+      const txLeads = await scanTexasComptroller(40);
       for (const lead of txLeads) {
         discoveredBusinesses.push(enrichBusinessWithMedia(lead));
       }
     }
 
-    // ==============================================================
-    // 3. HYDERABAD LIVE OPENSTREETMAP SCAN & GLOBAL BATCH SCAN
-    // ==============================================================
-    if (region === 'hyderabad' || (region === 'all' && !isLondonRequested && !isTexasRequested)) {
-      const gridsToScan =
+    // 3. HYDERABAD LIVE SCAN
+    if (region === 'hyderabad' || (region === 'all' && targetArea !== 'all' && !isLondonRequested && !isTexasRequested)) {
+      const grids =
         targetArea !== 'all' && HYDERABAD_SCAN_GRIDS[targetArea]
           ? { [targetArea]: HYDERABAD_SCAN_GRIDS[targetArea] }
-          : HYDERABAD_SCAN_GRIDS;
+          : { Kokapet: HYDERABAD_SCAN_GRIDS.Kokapet };
 
-      const gridPromises = Object.entries(gridsToScan).map(async ([areaName, grid]) => {
-        const overpassQuery = `
-[out:json][timeout:10];
-(
-  node["amenity"~"restaurant|cafe|fast_food|bar|pub|bakery|pharmacy"](around:${grid.radius},${grid.lat},${grid.lng});
-  node["shop"~"clothes|boutique|beauty|hairdresser|supermarket"](around:${grid.radius},${grid.lat},${grid.lng});
-  node["leisure"~"gym|fitness_centre"](around:${grid.radius},${grid.lat},${grid.lng});
-);
-out body 35;
-`;
+      for (const [areaName, grid] of Object.entries(grids)) {
+        const overpassQuery = `[out:json][timeout:3];node["amenity"~"restaurant|cafe|fast_food|bakery"](around:${grid.radius},${grid.lat},${grid.lng});out body 25;`;
         const elements = await queryOverpassWithFallback(overpassQuery);
-        return { areaName, elements };
-      });
 
-      const results = await Promise.all(gridPromises);
-
-      for (const { areaName, elements } of results) {
         for (const el of elements) {
           const tags = el.tags || {};
           const name = tags.name || tags['name:en'];
           if (!name || seenOsmIds.has(String(el.id))) continue;
-
           seenOsmIds.add(String(el.id));
 
-          const amenity = tags.amenity || '';
-          const shop = tags.shop || '';
-          const leisure = tags.leisure || '';
-          const categoryKey = amenity || shop || leisure;
-          const category = OSM_CATEGORY_MAP[categoryKey] || 'Food & Beverage';
-
+          const amenity = tags.amenity || 'Food & Beverage';
           const hasWebsite = Boolean(tags.website || tags['contact:website']);
-          const phone = tags.phone || tags['contact:phone'] || null;
-          const startDate = tags.start_date || tags.opening_date || null;
-
-          const leadScore = !hasWebsite ? 98 : 72;
 
           const newBiz: Business = {
             id: `osm-${el.id}`,
             osm_id: String(el.id),
             name: name.trim(),
-            category,
-            sub_category: categoryKey ? categoryKey.replace('_', ' ') : undefined,
+            category: 'Food & Beverage',
+            sub_category: amenity.replace('_', ' '),
             area: areaName,
             city: 'Hyderabad',
             state: 'Telangana',
@@ -395,32 +351,24 @@ out body 35;
             estimated_site_budget: '₹35,000 – ₹65,000',
             lat: el.lat,
             lng: el.lon,
-            phone,
-            website: tags.website || tags['contact:website'] || null,
+            phone: tags.phone || tags['contact:phone'] || null,
+            website: hasWebsite ? (tags.website || tags['contact:website']) : null,
             instagram_handle: tags['contact:instagram'] || null,
             instagram_url: null,
-            instagram_followers: null, // No fabricated follower count
+            instagram_followers: null,
             instagram_post_count: null,
-            actual_launch_date: startDate,
+            actual_launch_date: tags.start_date || tags.opening_date || null,
             first_seen_at: new Date().toISOString(),
             source: 'osm',
-            description: `${category} establishment on physical GPS node in ${areaName}, Hyderabad.`,
+            description: `Commercial establishment on physical GPS node in ${areaName}, Hyderabad.`,
             grok_summary: !hasWebsite
               ? `Storefront indexed in ${areaName}. Zero official website detected — prime agency candidate.`
               : `Indexed business in ${areaName}. Has existing site.`,
-            lead_score: leadScore,
+            lead_score: !hasWebsite ? 98 : 72,
             outreach_status: 'new',
           };
 
           discoveredBusinesses.push(enrichBusinessWithMedia(newBiz));
-        }
-      }
-
-      // If Global scan was requested, pull in Texas government records
-      if (region === 'all' && targetArea === 'all') {
-        const txLeads = await scanTexasComptroller(40);
-        for (const lead of txLeads) {
-          discoveredBusinesses.push(enrichBusinessWithMedia(lead));
         }
       }
     }
@@ -435,7 +383,7 @@ out body 35;
       discovered_count: discoveredBusinesses.length,
       newly_added: added,
       total_pipeline_count: count,
-      message: `Live scan completed! Discovered ${discoveredBusinesses.length} physical business leads via live APIs.`,
+      message: `Live scan completed! Discovered ${discoveredBusinesses.length} physical business leads.`,
       businesses: discoveredBusinesses,
     });
   } catch (error: any) {

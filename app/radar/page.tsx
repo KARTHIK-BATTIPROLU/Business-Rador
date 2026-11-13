@@ -66,8 +66,19 @@ export default function RadarPage() {
 
       const res = await fetch(`/api/businesses?${params.toString()}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.businesses)) {
+      if (data.success && Array.isArray(data.businesses) && data.businesses.length > 0) {
         setBusinesses(data.businesses);
+      } else {
+        // Fallback to client-cached scan leads if serverless instance is fresh
+        try {
+          const cached = localStorage.getItem('radar_cached_businesses');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setBusinesses(parsed);
+            }
+          }
+        } catch {}
       }
     } catch (err) {
       console.error('Error loading businesses:', err);
@@ -118,12 +129,31 @@ export default function RadarPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ area: targetArea, region: targetRegion }),
       });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const errJson = JSON.parse(errText);
+          errMsg = errJson.error || errMsg;
+        } catch {}
+        setScanMessage(`⚠️ Scan notice: ${errMsg}`);
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         setScanMessage(
           `✅ Discovery Complete: Spotted ${data.discovered_count} commercial businesses! (${data.newly_added} fresh leads added to pipeline)`
         );
-        await loadBusinesses();
+        if (data.businesses && Array.isArray(data.businesses) && data.businesses.length > 0) {
+          setBusinesses(data.businesses);
+          try {
+            localStorage.setItem('radar_cached_businesses', JSON.stringify(data.businesses));
+          } catch {}
+        } else {
+          await loadBusinesses();
+        }
       } else {
         setScanMessage(`⚠️ Scan notice: ${data.error || 'Scan finished with fallback data'}`);
       }
