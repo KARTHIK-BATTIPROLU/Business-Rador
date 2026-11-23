@@ -89,7 +89,7 @@ export function SearchBox({ value, onChange, className }: { value: string; onCha
   }, []);
   return (
     <div className={cn('relative', className)}>
-      <Search aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-4 stroke-[1.5] text-tan" />
+      <Search aria-hidden className="absolute left-3 top-1/2 center-y size-4 stroke-[1.5] text-tan" />
       <label htmlFor="radar-search" className="sr-only">
         Search leads
       </label>
@@ -102,7 +102,7 @@ export function SearchBox({ value, onChange, className }: { value: string; onCha
         placeholder="Search a shop, area or street"
         className="h-11 w-full rounded-ctl border border-hairline bg-surface pl-9 pr-9 text-sm text-ink placeholder:text-walnut/70 outline-none focus:border-ink"
       />
-      <kbd aria-hidden className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-2xs text-walnut border border-hairline rounded px-1.5 py-0.5 bg-paper">
+      <kbd aria-hidden className="absolute right-2.5 top-1/2 center-y font-mono text-2xs text-walnut border border-hairline rounded px-1.5 py-0.5 bg-paper">
         /
       </kbd>
     </div>

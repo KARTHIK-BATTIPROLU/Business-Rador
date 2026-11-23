@@ -13,7 +13,7 @@ const base =
 const variants: Record<Variant, string> = {
   // The one hard shadow in the system. Lifts on hover, presses flat on active.
   primary:
-    'bg-accent-strong text-surface border border-ink shadow-hard-sm hover:-translate-x-px hover:-translate-y-px hover:shadow-hard active:translate-x-0.5 active:translate-y-0.5 active:shadow-none',
+    'bg-accent-strong text-surface border border-ink shadow-hard-sm hover:nudge hover:shadow-hard active:press active:shadow-none',
   ink: 'bg-ink text-surface border border-ink hover:bg-walnut',
   outline: 'bg-surface text-ink border border-hairline hover:border-ink',
   ghost: 'text-walnut hover:text-ink hover:bg-sunk',

@@ -53,6 +53,13 @@
   }
 }
 
+/* Movement helpers (named so no raw translate utilities are needed). */
+@layer utilities {
+  .nudge { transform: translate(-1px, -1px); }
+  .press { transform: translate(2px, 2px); }
+  .center-y { transform: translateY(-50%); }
+}
+
 @layer components {
   .hairline {
     @apply border border-hairline;

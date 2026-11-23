@@ -128,7 +128,7 @@ export function Select({ className, children, ...p }: React.SelectHTMLAttributes
       >
         {children}
       </select>
-      <ChevronDown aria-hidden className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 stroke-[1.5] text-tan pointer-events-none" />
+      <ChevronDown aria-hidden className="absolute right-2.5 top-1/2 center-y size-4 stroke-[1.5] text-tan pointer-events-none" />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Business, RadarFilterState, OutreachStatus } from '@/lib/types';
 import { StatsBar } from '@/components/StatsBar';
 import { FilterBar, SearchBox } from '@/components/FilterBar';
 import { BusinessPanel } from '@/components/BusinessPanel';
-import { AREA_COORDINATES } from '@/components/RadarMap';
+import { AREA_COORDINATES } from '@/lib/areas';
 import { LeadDetail } from '@/components/radar/LeadDrawer';
 import { BottomSheet, type Snap } from '@/components/radar/BottomSheet';
 import { Wordmark } from '@/components/ui/primitives';

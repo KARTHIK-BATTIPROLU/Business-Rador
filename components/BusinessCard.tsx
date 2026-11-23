@@ -43,7 +43,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelec
       className={cn(
         'group relative rounded-panel border bg-surface p-4 text-left transition-[box-shadow,border-color,transform] duration-200 ease-out',
         onSelect && 'cursor-pointer',
-        isSelected ? 'border-ink shadow-hard -translate-x-px -translate-y-px' : 'border-hairline hover:border-tan',
+        isSelected ? 'border-ink shadow-hard nudge' : 'border-hairline hover:border-tan',
         b.outreach_status === 'skip' && !isSelected && 'opacity-70',
       )}
     >
