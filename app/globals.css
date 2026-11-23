@@ -94,3 +94,10 @@
     scroll-behavior: auto !important;
   }
 }
+
+.radar-hover .maplibregl-popup-content {
+  padding: 8px 10px !important;
+  border-color: rgb(var(--ink));
+  box-shadow: 2px 2px 0 rgb(var(--ink)) !important;
+  border-radius: 6px !important;
+}

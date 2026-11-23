@@ -1,38 +1,74 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Business, RadarFilterState, OutreachStatus } from '@/lib/types';
 import { StatsBar } from '@/components/StatsBar';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, SearchBox } from '@/components/FilterBar';
 import { BusinessPanel } from '@/components/BusinessPanel';
 import { AREA_COORDINATES } from '@/components/RadarMap';
-import { Radar, Radio, Github, ExternalLink, Database, Home, ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { LeadDetail } from '@/components/radar/LeadDrawer';
+import { BottomSheet, type Snap } from '@/components/radar/BottomSheet';
+import { Wordmark } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/Button';
+import { SAMPLE_LEADS } from '@/lib/sample-leads';
+import { isSample } from '@/lib/lead';
+import { X } from 'lucide-react';
 
-// Dynamic import with SSR disabled for WebGL canvas
-const RadarMap = dynamic(
-  () => import('@/components/RadarMap').then((mod) => mod.RadarMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-clay-canvas text-clay-muted gap-3">
-        <Radar className="w-8 h-8 text-accent-blue animate-spin" />
-        <span className="text-xs font-medium tracking-wide">Loading Hyderabad MapLibre Vector Radar...</span>
-      </div>
-    ),
+// MapLibre needs WebGL: client only, loaded on demand.
+const RadarMap = dynamic(() => import('@/components/RadarMap').then((m) => m.RadarMap), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 grid place-items-center bg-paper">
+      <p className="text-sm text-walnut" role="status">
+        Drawing west Hyderabad…
+      </p>
+    </div>
+  ),
+});
+
+type ScanState = { phase: 'idle' } | { phase: 'running'; step: number; where: string; steps: string[] } | { phase: 'done' | 'notice' | 'error'; text: string };
+
+function scanSteps(region: string, area: string): { where: string; steps: string[] } {
+  if (region === 'texas') {
+    return { where: 'Texas', steps: ['Reading new sales-tax permits from the Texas Comptroller', 'Placing permit addresses on the map', 'Scoring what came back'] };
   }
-);
+  if (region === 'london' || ['Shoreditch', 'Soho', 'Covent Garden'].includes(area)) {
+    const where = area !== 'all' ? area : 'Shoreditch and Soho';
+    return { where, steps: [`Asking OpenStreetMap about shops in ${where}`, 'Cross-checking Google Places', 'Scoring what came back'] };
+  }
+  const where = area !== 'all' ? area : region === 'all' ? 'every market' : 'west Hyderabad';
+  return {
+    where,
+    steps: [`Asking OpenStreetMap about shopfronts in ${where}`, 'Cross-checking Google Places for phone numbers', 'Looking for opening dates', 'Scoring what came back'],
+  };
+}
+
+function useIsTablet() {
+  const [is, setIs] = useState<boolean | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const on = () => setIs(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return is;
+}
 
 export default function RadarPage() {
+  const reduce = useReducedMotion();
+  const isTablet = useIsTablet();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState<string | null>(null);
-  const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number; zoom?: number } | null>(
-    null
-  );
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [scan, setScan] = useState<ScanState>({ phase: 'idle' });
+  const [sampleMode, setSampleMode] = useState(false);
+  const [snap, setSnap] = useState<Snap>('half');
+  const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
 
   const [filters, setFilters] = useState<RadarFilterState>({
     region: 'all',
@@ -47,8 +83,11 @@ export default function RadarPage() {
     source: 'all',
   });
 
+  const isScanning = scan.phase === 'running';
+
   const loadBusinesses = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams();
       if (filters.region && filters.region !== 'all') params.set('region', filters.region);
@@ -69,36 +108,60 @@ export default function RadarPage() {
       if (data.success && Array.isArray(data.businesses) && data.businesses.length > 0) {
         setBusinesses(data.businesses);
       } else {
-        // Fallback to client-cached scan leads if serverless instance is fresh
+        // Fall back to leads cached from this browser's last scan (fresh serverless instance).
+        let cachedList: Business[] = [];
         try {
           const cached = localStorage.getItem('radar_cached_businesses');
           if (cached) {
             const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setBusinesses(parsed);
-            }
+            if (Array.isArray(parsed)) cachedList = parsed;
           }
         } catch {}
+        setBusinesses(cachedList);
+        if (!data.success && cachedList.length === 0) setLoadError(data.error || 'The server returned an error.');
       }
     } catch (err) {
       console.error('Error loading businesses:', err);
+      setLoadError(err instanceof Error ? err.message : 'Network error.');
     } finally {
       setIsLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
-    loadBusinesses();
-  }, [loadBusinesses]);
+    if (sampleMode) return;
+    const t = setTimeout(loadBusinesses, filters.search ? 220 : 0); // debounce typing
+    return () => clearTimeout(t);
+  }, [loadBusinesses, sampleMode, filters.search]);
+
+  // Escape closes the open lead.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedBusiness && !document.querySelector('[role="dialog"],[role="menu"]')) setSelectedBusiness(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedBusiness]);
+
+  // Advance the scan progress text while the request is in flight.
+  useEffect(() => {
+    if (scan.phase !== 'running') return;
+    const t = setInterval(() => setScan((s) => (s.phase === 'running' ? { ...s, step: Math.min(s.step + 1, s.steps.length - 1) } : s)), 4500);
+    return () => clearInterval(t);
+  }, [scan.phase]);
+
+  // Sample mode: filter the sample set client-side so search still feels real.
+  const visible = useMemo(() => {
+    if (!sampleMode) return businesses;
+    const s = filters.search.toLowerCase();
+    return businesses.filter((b) => !s || b.name.toLowerCase().includes(s) || b.area.toLowerCase().includes(s));
+  }, [businesses, sampleMode, filters.search]);
 
   const handleStatusChange = async (id: string, status: OutreachStatus, notes?: string) => {
-    setBusinesses((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, outreach_status: status, outreach_notes: notes || b.outreach_notes } : b))
-    );
-    if (selectedBusiness?.id === id) {
-      setSelectedBusiness((prev) => (prev ? { ...prev, outreach_status: status, outreach_notes: notes || prev.outreach_notes } : null));
-    }
-
+    const patch = (b: Business) => (b.id === id ? { ...b, outreach_status: status, outreach_notes: notes ?? b.outreach_notes } : b);
+    setBusinesses((prev) => prev.map(patch));
+    setSelectedBusiness((prev) => (prev ? patch(prev) : prev));
+    if (isSample({ id })) return; // samples never touch the database
     try {
       await fetch('/api/outreach', {
         method: 'POST',
@@ -110,18 +173,12 @@ export default function RadarPage() {
     }
   };
 
-  const handleManualScan = async (selectedRegion?: string, selectedArea?: string) => {
-    setIsScanning(true);
-    const targetRegion = selectedRegion || filters.region || 'all';
-    const targetArea = selectedArea !== undefined ? selectedArea : (filters.area !== 'all' ? filters.area : 'all');
-
-    let scanTitle = 'Hyderabad West corridors';
-    if (targetRegion === 'texas') scanTitle = 'Texas Comptroller Open Data (SODA API) across Austin & Dallas';
-    else if (targetRegion === 'london' || targetArea.includes('Shoreditch') || targetArea.includes('Soho')) scanTitle = `London (${targetArea !== 'all' ? targetArea : 'Shoreditch & Soho'}) corridors`;
-    else if (targetRegion === 'all' && targetArea === 'all') scanTitle = 'Global Markets (Texas Permits, London & Hyderabad)';
-    else if (targetArea !== 'all') scanTitle = targetArea;
-
-    setScanMessage(`📡 Querying live government & GPS nodes across ${scanTitle}...`);
+  const handleManualScan = async () => {
+    const targetRegion = filters.region || 'all';
+    const targetArea = filters.area !== 'all' ? filters.area : 'all';
+    const { where, steps } = scanSteps(targetRegion, targetArea);
+    setScan({ phase: 'running', step: 0, where, steps });
+    setSampleMode(false);
 
     try {
       const res = await fetch('/api/scan', {
@@ -132,21 +189,24 @@ export default function RadarPage() {
 
       if (!res.ok) {
         const errText = await res.text();
-        let errMsg = `HTTP ${res.status}`;
+        let msg = `HTTP ${res.status}`;
         try {
-          const errJson = JSON.parse(errText);
-          errMsg = errJson.error || errMsg;
+          msg = JSON.parse(errText).error || msg;
         } catch {}
-        setScanMessage(`⚠️ Scan notice: ${errMsg}`);
+        setScan({ phase: 'error', text: `The scan stopped early: ${msg}. Nothing was lost; try again in a minute.` });
         return;
       }
 
       const data = await res.json();
       if (data.success) {
-        setScanMessage(
-          `✅ Discovery Complete: Spotted ${data.discovered_count} commercial businesses! (${data.newly_added} fresh leads added to pipeline)`
-        );
-        if (data.businesses && Array.isArray(data.businesses) && data.businesses.length > 0) {
+        setScan({
+          phase: 'done',
+          text:
+            data.newly_added > 0
+              ? `Found ${data.discovered_count} places in ${where}. ${data.newly_added} of them are new to your list.`
+              : `Checked ${data.discovered_count} places in ${where}. Nothing new since the last scan.`,
+        });
+        if (Array.isArray(data.businesses) && data.businesses.length > 0) {
           setBusinesses(data.businesses);
           try {
             localStorage.setItem('radar_cached_businesses', JSON.stringify(data.businesses));
@@ -155,188 +215,152 @@ export default function RadarPage() {
           await loadBusinesses();
         }
       } else {
-        setScanMessage(`⚠️ Scan notice: ${data.error || 'Scan finished with fallback data'}`);
+        setScan({ phase: 'notice', text: data.error || 'The scan finished but returned fallback data.' });
       }
-    } catch (err: any) {
-      setScanMessage(`❌ Scan error: ${err.message}`);
+    } catch (err) {
+      setScan({ phase: 'error', text: `The scan couldn't reach the server (${err instanceof Error ? err.message : 'network error'}).` });
     } finally {
-      setIsScanning(false);
-      setTimeout(() => setScanMessage(null), 8000);
+      setTimeout(() => setScan((s) => (s.phase === 'running' ? s : { phase: 'idle' })), 9000);
     }
+  };
+
+  const previewSamples = () => {
+    setSampleMode(true);
+    setBusinesses(SAMPLE_LEADS);
+    setLoadError(null);
   };
 
   const handleAreaJump = (areaName: string) => {
     const coords = AREA_COORDINATES[areaName];
-    if (coords) {
-      setFlyToCoords({ lng: coords[0], lat: coords[1], zoom: 14.5 });
-    }
+    if (coords) setFlyToCoords({ lng: coords[0], lat: coords[1], zoom: areaName === 'Hyderabad' ? 12.2 : 14.5 });
   };
 
+  const select = (b: Business) => {
+    setSelectedBusiness(b);
+    setSnap((s) => (s === 'peek' ? 'half' : s));
+  };
+
+  const updateFilters = (u: Partial<RadarFilterState>) => setFilters((prev) => ({ ...prev, ...u }));
+
+  const scanLabel = filters.area !== 'all' ? `Scan ${filters.area}` : filters.region === 'texas' ? 'Scan Texas permits' : filters.region === 'london' ? 'Scan London' : 'Scan for new shops';
+
+  const panel = (
+    <BusinessPanel
+      businesses={visible}
+      selectedId={selectedBusiness?.id}
+      onSelectBusiness={(b) => {
+        select(b);
+        if (b.lat && b.lng) setFlyToCoords({ lat: b.lat, lng: b.lng, zoom: 15.5 });
+      }}
+      onStatusChange={handleStatusChange}
+      onRefresh={sampleMode ? undefined : loadBusinesses}
+      onTriggerScan={handleManualScan}
+      onPreviewSamples={sampleMode ? undefined : previewSamples}
+      isScanning={isScanning}
+      isLoading={isLoading && !sampleMode}
+      error={loadError}
+      header={<StatsBar businesses={visible} selectedArea={filters.area} />}
+    />
+  );
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-clay-canvas overflow-hidden select-none">
-      {/* Top Porcelain Header */}
-      <header className="h-16 border-b border-clay-border/80 bg-white/95 backdrop-blur-md px-5 flex items-center justify-between z-20 shrink-0 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            title="Back to Landing Page"
-            className="p-2 rounded-clay-sm bg-white hover:bg-slate-50 text-clay-muted hover:text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden">
+      <a href="#radar-search" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 z-[60] bg-surface border border-ink px-3 py-2 rounded-ctl">
+        Skip to search
+      </a>
 
-          <div className="p-2.5 rounded-clay-sm bg-blue-50 text-accent-blue shadow-clay-btn border border-blue-100">
-            <Radar className="w-5 h-5 animate-pulse" />
+      <header className="shrink-0 border-b border-hairline bg-paper z-20">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 sm:px-4 py-2.5">
+          <Link href="/" aria-label="Business Radar home" className="mr-1 sm:mr-3 min-h-11 inline-flex items-center">
+            <Wordmark compact />
+          </Link>
+          <SearchBox value={filters.search} onChange={(v) => updateFilters({ search: v })} className="order-3 basis-full md:order-none md:basis-auto md:flex-1 md:max-w-md" />
+          <div className="order-4 basis-full md:order-none md:basis-auto">
+            <FilterBar filters={filters} onChange={updateFilters} onAreaJump={handleAreaJump} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-clay-text text-base tracking-tight">
-                Business Founder Radar
-              </h1>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-accent-blue border border-blue-200/80 font-semibold shadow-clay-pill hidden sm:inline">
-                {filters.region === 'texas'
-                  ? '🇺🇸 Texas High-Ticket Pipeline ($)'
-                  : filters.region === 'london'
-                  ? '🇬🇧 London Independent Pipeline (£)'
-                  : filters.region === 'hyderabad'
-                  ? '🇮🇳 Hyderabad MSME Pipeline (₹)'
-                  : '🌐 Global MSME & Retail Pipeline'}
-              </span>
-            </div>
-            <div className="text-[11px] text-clay-muted flex items-center gap-2 font-medium">
-              <span className="flex items-center gap-1.5 text-emerald-700">
-                <Radio className="w-2.5 h-2.5 text-accent-emerald animate-ping" /> Scans Every 8h
-              </span>
-              <span>•</span>
-              <span>
-                {filters.region === 'texas'
-                  ? 'Texas Comptroller Open Data · Google Maps · Instagram'
-                  : 'Google Maps · Instagram · OpenStreetMap'}
-              </span>
-            </div>
-          </div>
+          <Button onClick={handleManualScan} disabled={isScanning} variant="primary" size="md" className="ml-auto">
+            {isScanning ? 'Scanning…' : scanLabel}
+          </Button>
         </div>
 
-        {/* Navigation & Live Manual Scanner Action */}
-        <div className="flex items-center gap-2.5">
-          {/* Prominent Live Radar Scan Button */}
-          <button
-            onClick={() => handleManualScan(filters.region, filters.area)}
-            disabled={isScanning}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-clay-sm bg-accent-blue hover:bg-blue-600 text-white font-bold text-xs shadow-clay-card transition active:translate-y-0.5 disabled:opacity-75"
-            title="Query physical GPS nodes and live government permit databases"
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : 'animate-pulse'}`} />
-            <span className="hidden sm:inline">
-              {isScanning
-                ? 'Scanning Sources...'
-                : filters.area !== 'all'
-                ? `⚡ Scan ${filters.area} for New Businesses`
-                : filters.region === 'texas'
-                ? '⚡ Scan Texas Permits (80+ Leads)'
-                : filters.region === 'london'
-                ? '⚡ Scan London Corridors (50+ Leads)'
-                : filters.region === 'all'
-                ? '⚡ Scan All Global Markets (100+ Leads)'
-                : '⚡ Scan Hyderabad for New Businesses'}
-            </span>
-            <span className="sm:hidden">
-              {isScanning ? 'Scanning...' : '⚡ Scan'}
-            </span>
-          </button>
-
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-xs font-semibold text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
-          >
-            <Home className="w-3.5 h-3.5 text-slate-700" />
-            <span className="hidden md:inline">Landing Page</span>
-          </Link>
-
-          <Link
-            href="/todos"
-            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-accent-blue border border-blue-200/80 shadow-clay-btn transition active:translate-y-0.5"
-          >
-            <Database className="w-3.5 h-3.5 text-accent-blue" />
-            <span>Supabase SSR</span>
-          </Link>
-
-          <a
-            href="https://github.com/KARTHIK-BATTIPROLU/Business-Rador"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-white hover:bg-slate-50 text-xs font-semibold text-clay-text border border-clay-border shadow-clay-btn transition active:translate-y-0.5"
-          >
-            <Github className="w-3.5 h-3.5 text-slate-700" />
-            <span>GitHub</span>
-            <ExternalLink className="w-3 h-3 text-clay-faint" />
-          </a>
-        </div>
+        <AnimatePresence>
+          {(scan.phase !== 'idle' || sampleMode) && (
+            <motion.div
+              initial={reduce ? false : { height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="overflow-hidden border-t border-hairline bg-surface"
+            >
+              <div role="status" className="flex items-center gap-3 px-4 py-2 text-sm">
+                {scan.phase === 'running' ? (
+                  <>
+                    <span className="font-mono text-xs text-walnut tabular shrink-0">
+                      {scan.step + 1}/{scan.steps.length}
+                    </span>
+                    <span className="text-ink">{scan.steps[scan.step]}…</span>
+                    <span aria-hidden className="ml-auto hidden sm:block h-1 w-40 rounded-full bg-sunk overflow-hidden">
+                      <span className="block h-full bg-ink transition-[width] duration-300 ease-out" style={{ width: `${((scan.step + 1) / (scan.steps.length + 1)) * 100}%` }} />
+                    </span>
+                  </>
+                ) : scan.phase !== 'idle' ? (
+                  <>
+                    <span className={scan.phase === 'error' ? 'text-status-interested' : 'text-ink'}>{scan.text}</span>
+                    <button type="button" onClick={() => setScan({ phase: 'idle' })} className="ml-auto size-9 grid place-items-center rounded-ctl text-walnut hover:bg-sunk" aria-label="Dismiss">
+                      <X aria-hidden className="size-4 stroke-[1.5]" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-ink">These are ten invented sample shops. Run a scan to see real ones.</span>
+                    <button type="button" onClick={() => { setSampleMode(false); setSelectedBusiness(null); loadBusinesses(); }} className="ml-auto text-sm underline underline-offset-4 text-walnut hover:text-ink min-h-9">
+                      Hide samples
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      {/* Live Scan Notification Toast */}
-      {scanMessage && (
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-xs px-5 py-2 font-medium flex items-center justify-between shadow-md z-30 transition-all">
-          <div className="flex items-center gap-2">
-            {isScanning ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-            )}
-            <span className="font-semibold">{scanMessage}</span>
-          </div>
-          <button
-            onClick={() => setScanMessage(null)}
-            className="text-white/80 hover:text-white px-2 py-0.5 text-xs font-bold"
-          >
-            ✕
-          </button>
+      <main className="relative flex-1 min-h-0 flex">
+        {/* Left: lead list (tablet and up) */}
+        <aside className="hidden md:flex w-[340px] lg:w-[380px] shrink-0 border-r border-hairline bg-paper flex-col min-h-0">{isTablet && panel}</aside>
+
+        {/* Centre: map */}
+        <div className="relative flex-1 min-w-0">
+          <RadarMap businesses={visible} selectedBusiness={selectedBusiness} onSelectBusiness={select} flyToCoords={flyToCoords} />
         </div>
+
+        {/* Right: drawer (tablet and up). Pushes the map on desktop, overlays it on tablet. */}
+        <AnimatePresence>
+          {selectedBusiness && isTablet && (
+            <motion.aside
+              key="drawer"
+              aria-label={`Lead: ${selectedBusiness.name}`}
+              initial={reduce ? false : { x: 24, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={reduce ? { opacity: 0 } : { x: 24, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="hidden md:flex absolute lg:static right-0 inset-y-0 z-20 w-[380px] lg:w-[400px] shrink-0 border-l border-ink lg:border-hairline bg-surface flex-col min-h-0"
+            >
+              <LeadDetail business={selectedBusiness} onClose={() => setSelectedBusiness(null)} onStatusChange={handleStatusChange} className="h-full" />
+            </motion.aside>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Mobile: bottom sheet with the list, or the open lead */}
+      {isTablet === false && (
+      <BottomSheet snap={snap} onSnap={setSnap} label={selectedBusiness ? `Lead: ${selectedBusiness.name}` : 'Leads'}>
+        {selectedBusiness ? (
+          <LeadDetail business={selectedBusiness} onClose={() => setSelectedBusiness(null)} onStatusChange={handleStatusChange} className="h-full" />
+        ) : (
+          panel
+        )}
+      </BottomSheet>
       )}
-
-      {/* KPI Stats Bar */}
-      <StatsBar businesses={businesses} selectedArea={filters.area} />
-
-      {/* Filter Bar with Inset Search & Clay Selectors */}
-      <FilterBar
-        filters={filters}
-        onChange={(updated) => setFilters((prev) => ({ ...prev, ...updated }))}
-        onAreaJump={handleAreaJump}
-        onTriggerScan={(region, area) => handleManualScan(region || filters.region, area || filters.area)}
-        isScanning={isScanning}
-      />
-
-      {/* Main Split Layout */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Left: Map */}
-        <div className="flex-1 h-[50vh] md:h-full relative">
-          <RadarMap
-            businesses={businesses}
-            selectedBusiness={selectedBusiness}
-            onSelectBusiness={(b) => setSelectedBusiness(b)}
-            flyToCoords={flyToCoords}
-          />
-        </div>
-
-        {/* Right: Business CRM Discovery Panel */}
-        <div className="w-full md:w-[420px] lg:w-[460px] h-[50vh] md:h-full shrink-0 z-10">
-          <BusinessPanel
-            businesses={businesses}
-            selectedId={selectedBusiness?.id}
-            onSelectBusiness={(b) => {
-              setSelectedBusiness(b);
-              if (b.lat && b.lng) {
-                setFlyToCoords({ lat: b.lat, lng: b.lng, zoom: 15.5 });
-              }
-            }}
-            onStatusChange={handleStatusChange}
-            onRefresh={loadBusinesses}
-            onTriggerScan={() => handleManualScan(filters.area)}
-            isScanning={isScanning}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
     </div>
   );
 }
