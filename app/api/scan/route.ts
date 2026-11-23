@@ -75,19 +75,37 @@ async function queryOverpassWithFallback(query: string): Promise<any[]> {
   return [];
 }
 
-// OpenStreetMap Nominatim Fallback POI Extractor
-async function queryNominatimPOI(
-  query: string,
+// Resilient Worldwide POI Extractor combining Nominatim + Komoot Photon Engine
+async function queryGlobalPOIs(
+  lat: number,
+  lng: number,
+  areaName: string,
+  cityName: string,
+  countryName: string,
   category = 'Food & Beverage',
   limit = 25
 ): Promise<any[]> {
+  const items: any[] = [];
+  const seenIds = new Set<string>();
+
+  const catWord =
+    category === 'Food & Beverage'
+      ? 'restaurant'
+      : category === 'Fitness'
+      ? 'gym'
+      : category === 'Beauty & Wellness'
+      ? 'salon'
+      : category === 'Clothing & Fashion'
+      ? 'boutique'
+      : 'store';
+
+  // 1. Nominatim search with clean syntax (no boolean operators)
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
+    const timeout = setTimeout(() => controller.abort(), 2200);
 
-    const searchTerm = query.includes('in ') ? query : `${category === 'Food & Beverage' ? 'restaurant or cafe' : category} in ${query}`;
-
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&addressdetails=1&limit=${limit}`;
+    const q = `${catWord} in ${areaName} ${cityName} ${countryName}`.trim();
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=${limit}`;
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'BusinessRadar/1.0 (Worldwide Lead Radar)' },
@@ -96,12 +114,58 @@ async function queryNominatimPOI(
 
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data)) return data;
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.osm_id && !seenIds.has(String(item.osm_id))) {
+            seenIds.add(String(item.osm_id));
+            items.push(item);
+          }
+        }
+      }
     }
-  } catch {
-    // fallback
+  } catch {}
+
+  // 2. Photon Engine (High-reliability GPS proximity search)
+  if (items.length < 8) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2200);
+
+      const pUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(catWord + ' ' + areaName + ' ' + cityName)}&lat=${lat}&lon=${lng}&limit=${limit}`;
+      const res = await fetch(pUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'BusinessRadar/1.0 (Worldwide Lead Radar)' },
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.features && Array.isArray(data.features)) {
+          for (const f of data.features) {
+            const props = f.properties || {};
+            const osmId = props.osm_id || Math.random().toString(36).substring(7);
+            if (!seenIds.has(String(osmId)) && props.name) {
+              seenIds.add(String(osmId));
+              items.push({
+                osm_id: osmId,
+                name: props.name,
+                lat: f.geometry.coordinates[1],
+                lon: f.geometry.coordinates[0],
+                type: props.osm_value || props.category || catWord,
+                address: {
+                  road: props.street || props.district || areaName,
+                  city: props.city || cityName,
+                  state: props.state,
+                },
+              });
+            }
+          }
+        }
+      }
+    } catch {}
   }
-  return [];
+
+  return items;
 }
 
 // Live Texas Comptroller Open Data (SODA API) Scanner — Ultra-Fast (200ms)
@@ -232,8 +296,15 @@ async function scanTexasComptroller(limit = 45, specificCity?: string): Promise<
   } catch (err) {
     console.warn('Texas SODA failed/timeout, utilizing open registry fallback:', err);
     try {
-      const fallbackQuery = specificCity ? `restaurant in ${specificCity} Texas` : 'restaurant in Austin Texas';
-      const nomItems = await queryNominatimPOI(fallbackQuery, 'Food & Beverage', 30);
+      const nomItems = await queryGlobalPOIs(
+        30.2672,
+        -97.7431,
+        specificCity || 'Austin',
+        specificCity || 'Austin',
+        'USA',
+        'Food & Beverage',
+        25
+      );
       return nomItems.map((item, idx) => ({
         id: `tx-osm-${item.osm_id || idx}`,
         name: item.name || item.display_name.split(',')[0],
@@ -300,9 +371,16 @@ async function scanWorldwideOSM(
     let elements = await queryOverpassWithFallback(overpassQuery);
 
     if (!elements || elements.length === 0) {
-      const nomQuery = `${targetCategory || 'restaurant or cafe'} in ${areaName} ${cityName}`;
-      const nomItems = await queryNominatimPOI(nomQuery, targetCategory, 25);
-      for (const item of nomItems) {
+      const globalItems = await queryGlobalPOIs(
+        lat,
+        lng,
+        areaName,
+        cityName,
+        countryName,
+        targetCategory,
+        25
+      );
+      for (const item of globalItems) {
         const addr = item.address || {};
         const name = item.name || (item.display_name ? item.display_name.split(',')[0] : 'Commercial Venue');
         if (!name || seenOsmIds.has(String(item.osm_id))) continue;
@@ -450,19 +528,25 @@ export async function POST(req: NextRequest) {
     }
     // 2. Global Sweep ("Scan All Global Markets")
     else if (region === 'all' && (targetArea === 'all' || !targetArea)) {
-      const [txRes, ldnRes, hydRes, nycRes, tokyoRes] = await Promise.allSettled([
-        scanTexasComptroller(45),
+      const [txRes, ldnRes, hydRes, blrRes, nycRes, tokyoRes, sydRes, berRes] = await Promise.allSettled([
+        scanTexasComptroller(20),
         scanWorldwideOSM(51.5245, -0.0785, 1400, 'Shoreditch', 'London', 'United Kingdom', 'GB', category),
         scanWorldwideOSM(17.4156, 78.3298, 1500, 'Kokapet', 'Hyderabad', 'India', 'IN', category),
+        scanWorldwideOSM(12.9784, 77.6408, 1500, 'Indiranagar', 'Bangalore', 'India', 'IN', category),
         scanWorldwideOSM(40.7233, -73.9990, 1300, 'SoHo', 'New York City', 'United States', 'US', category),
         scanWorldwideOSM(35.6580, 139.7016, 1400, 'Shibuya', 'Tokyo', 'Japan', 'JP', category),
+        scanWorldwideOSM(-33.8860, 151.2100, 1400, 'Surry Hills', 'Sydney', 'Australia', 'AU', category),
+        scanWorldwideOSM(52.5200, 13.4050, 1400, 'Mitte', 'Berlin', 'Germany', 'DE', category),
       ]);
 
       if (txRes.status === 'fulfilled') rawCandidates.push(...txRes.value);
       if (ldnRes.status === 'fulfilled') rawCandidates.push(...ldnRes.value);
       if (hydRes.status === 'fulfilled') rawCandidates.push(...hydRes.value);
+      if (blrRes.status === 'fulfilled') rawCandidates.push(...blrRes.value);
       if (nycRes.status === 'fulfilled') rawCandidates.push(...nycRes.value);
       if (tokyoRes.status === 'fulfilled') rawCandidates.push(...tokyoRes.value);
+      if (sydRes.status === 'fulfilled') rawCandidates.push(...sydRes.value);
+      if (berRes.status === 'fulfilled') rawCandidates.push(...berRes.value);
     }
     // 3. Country or Specific City / Area Requested
     else {
