@@ -65,8 +65,8 @@ async function probeInstagramHandle(candidateHandle: string): Promise<InstagramP
       handle: cleanHandle,
       url: `https://www.instagram.com/${cleanHandle}/`,
       verified: true,
-      followers: followers ?? 150,
-      postCount: postCount ?? 2,
+      followers: followers,
+      postCount: postCount,
     };
   } catch (err) {
     console.warn(`Instagram probe failed for ${cleanHandle}:`, err);

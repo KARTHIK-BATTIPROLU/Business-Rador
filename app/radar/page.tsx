@@ -75,7 +75,18 @@ export default function RadarPage() {
           if (cached) {
             const parsed = JSON.parse(cached);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setBusinesses(parsed);
+              // Purge legacy synthetic mock data
+              const verifiedOnly = parsed.filter(
+                (b: any) =>
+                  !b.id?.startsWith('mock-') &&
+                  !b.id?.startsWith('ldn-sh-') &&
+                  !b.id?.startsWith('tx-sc-') &&
+                  !b.name?.includes('BakeOasis') &&
+                  !b.name?.includes('Bouldin Creek Aperitivo')
+              );
+              if (verifiedOnly.length > 0) {
+                setBusinesses(verifiedOnly);
+              }
             }
           }
         } catch {}
@@ -110,24 +121,51 @@ export default function RadarPage() {
     }
   };
 
-  const handleManualScan = async (selectedRegion?: string, selectedArea?: string) => {
+  const handleManualScan = async (
+    selectedRegion?: string,
+    selectedArea?: string,
+    customCoords?: { lat: number; lng: number; radius?: number; city?: string; country?: string }
+  ) => {
     setIsScanning(true);
     const targetRegion = selectedRegion || filters.region || 'all';
     const targetArea = selectedArea !== undefined ? selectedArea : (filters.area !== 'all' ? filters.area : 'all');
 
-    let scanTitle = 'Hyderabad West corridors';
-    if (targetRegion === 'texas') scanTitle = 'Texas Comptroller Open Data (SODA API) across Austin & Dallas';
-    else if (targetRegion === 'london' || targetArea.includes('Shoreditch') || targetArea.includes('Soho')) scanTitle = `London (${targetArea !== 'all' ? targetArea : 'Shoreditch & Soho'}) corridors`;
-    else if (targetRegion === 'all' && targetArea === 'all') scanTitle = 'Global Markets (Texas Permits, London & Hyderabad)';
-    else if (targetArea !== 'all') scanTitle = targetArea;
+    let scanTitle = 'Global Commercial Corridors';
+    if (customCoords) {
+      scanTitle = customCoords.city ? `${customCoords.city} (${targetArea})` : targetArea;
+    } else if (targetArea !== 'all') {
+      scanTitle = targetArea;
+    } else if (filters.city) {
+      scanTitle = filters.city;
+    } else if (targetRegion === 'texas' || targetRegion === 'usa') {
+      scanTitle = 'United States (Texas & Major Metros)';
+    } else if (targetRegion === 'london' || targetRegion === 'uk') {
+      scanTitle = 'United Kingdom Corridors';
+    } else if (targetRegion === 'hyderabad' || targetRegion === 'india') {
+      scanTitle = 'India Commercial Corridors';
+    }
 
-    setScanMessage(`📡 Querying live government & GPS nodes across ${scanTitle}...`);
+    setScanMessage(`📡 Querying live commercial nodes & registries across ${scanTitle}...`);
 
     try {
+      const payload: any = {
+        area: targetArea,
+        region: targetRegion,
+        city: customCoords?.city || filters.city,
+        country: customCoords?.country || filters.country,
+        category: filters.category !== 'all' ? filters.category : undefined,
+      };
+
+      if (customCoords) {
+        payload.lat = customCoords.lat;
+        payload.lng = customCoords.lng;
+        if (customCoords.radius) payload.radius = customCoords.radius;
+      }
+
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area: targetArea, region: targetRegion }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -165,11 +203,19 @@ export default function RadarPage() {
     }
   };
 
-  const handleAreaJump = (areaName: string) => {
-    const coords = AREA_COORDINATES[areaName];
+  const handleAreaJump = (areaName: string, coords?: [number, number]) => {
     if (coords) {
       setFlyToCoords({ lng: coords[0], lat: coords[1], zoom: 14.5 });
+      return;
     }
+    const preset = AREA_COORDINATES[areaName];
+    if (preset) {
+      setFlyToCoords({ lng: preset[0], lat: preset[1], zoom: 14.5 });
+    }
+  };
+
+  const handleScanViewport = (coords: { lat: number; lng: number; radius: number }) => {
+    handleManualScan(filters.region, 'Map Viewport', coords);
   };
 
   return (
@@ -302,7 +348,7 @@ export default function RadarPage() {
         filters={filters}
         onChange={(updated) => setFilters((prev) => ({ ...prev, ...updated }))}
         onAreaJump={handleAreaJump}
-        onTriggerScan={(region, area) => handleManualScan(region || filters.region, area || filters.area)}
+        onTriggerScan={(region, area, coords) => handleManualScan(region || filters.region, area || filters.area, coords)}
         isScanning={isScanning}
       />
 
@@ -315,6 +361,8 @@ export default function RadarPage() {
             selectedBusiness={selectedBusiness}
             onSelectBusiness={(b) => setSelectedBusiness(b)}
             flyToCoords={flyToCoords}
+            onScanViewport={handleScanViewport}
+            isScanning={isScanning}
           />
         </div>
 

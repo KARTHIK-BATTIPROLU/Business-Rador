@@ -345,7 +345,7 @@ Business Radar Partner Team`;
           {/* Google Maps Search Button - Opens Verified Google Place Card */}
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-              business.name + ' ' + (business.area || '') + ' ' + (business.city || '')
+              [business.name, business.area, business.city].filter(Boolean).join(' ')
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -444,10 +444,13 @@ Business Radar Partner Team`;
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-700 hover:underline font-semibold bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200"
-                    title={`Instagram profile with ${business.instagram_followers || 0} followers`}
+                    title={`Instagram profile: @${business.instagram_handle.replace('@', '')}`}
                   >
                     <Instagram className="w-3.5 h-3.5" />
-                    <span>@{business.instagram_handle.replace('@', '')} ({business.instagram_followers || 0} followers)</span>
+                    <span>
+                      @{business.instagram_handle.replace('@', '')}
+                      {business.instagram_followers && business.instagram_followers > 0 ? ` (${business.instagram_followers.toLocaleString()} followers)` : ''}
+                    </span>
                     {business.instagram_verified && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
                   </a>
                 </>
@@ -456,16 +459,16 @@ Business Radar Partner Team`;
                   <span>•</span>
                   <span className="flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 text-[11px]">
                     <Instagram className="w-3.5 h-3.5 text-slate-400" />
-                    <span>No Official IG Account (Pre-launch)</span>
+                    <span>Instagram Profile Not In Registry</span>
                   </span>
                   <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" "' + (business.city || business.area) + '"')}`}
+                    href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area || ''))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-pink-700 hover:underline font-semibold"
                     title="Search Google for authentic social footprint and founder mentions"
                   >
-                    Search Google for Socials →
+                    Find on Instagram via Google →
                   </a>
                 </>
               )}

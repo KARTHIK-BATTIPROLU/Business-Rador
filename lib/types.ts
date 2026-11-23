@@ -87,20 +87,24 @@ export interface Business {
 }
 
 export interface RadarFilterState {
-  region: 'all' | 'hyderabad' | 'texas' | 'london';
-  country?: 'all' | 'usa' | 'uk' | 'india';
+  region: string;
+  country?: string;
+  city?: string;
   us_state?: string;
   area: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
   category: string;
   recency: 'all' | '24h' | '7d' | '30d' | '6m';
   launch_age?: 'all' | 'opening_soon' | '14d' | '30d' | '90d' | 'older';
-  missing_website_only?: boolean; // Store Leads inspired: filter only businesses without a website
+  missing_website_only?: boolean; // Filter only businesses without a website
   has_website?: 'all' | 'yes' | 'no';
   low_social_only?: boolean; // Filter businesses with < 500 Instagram followers
   instagram_filter?: 'all' | 'low_followers' | 'no_instagram' | 'dormant_posts';
   search: string;
   status: 'all' | OutreachStatus;
-  source: 'all' | 'google_maps' | 'instagram' | 'osm' | 'texas_comptroller';
+  source: 'all' | 'google_maps' | 'instagram' | 'osm' | 'texas_comptroller' | string;
 }
 
 export interface AreaStat {

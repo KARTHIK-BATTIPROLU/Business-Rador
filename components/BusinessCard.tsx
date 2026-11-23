@@ -181,12 +181,12 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
 
           {/* Instagram Followers / Social Status Pill */}
           <div className="flex items-center gap-2 flex-wrap pt-0.5">
-            {business.instagram_followers !== null && business.instagram_followers !== undefined ? (
+            {business.instagram_followers !== null && business.instagram_followers !== undefined && business.instagram_followers > 0 ? (
               <>
                 <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
                   <Camera className="w-3 h-3" />
                   <span>
-                    <strong className="text-pink-900">{business.instagram_followers} followers</strong>
+                    <strong className="text-pink-900">{business.instagram_followers.toLocaleString()} followers</strong>
                     {business.instagram_post_count !== undefined && business.instagram_post_count !== null && (
                       <span className="ml-1 text-pink-800">· {business.instagram_post_count} posts</span>
                     )}
@@ -194,14 +194,19 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
                 </div>
                 {business.instagram_followers < 500 && (
                   <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200" title="Low social presence indicates founder is early and actively building brand">
-                    ⚡ Low Social Footprint
+                    ⚡ Early Social Stage
                   </span>
                 )}
               </>
+            ) : business.instagram_handle ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-pink-700 bg-pink-50/80 px-2 py-0.5 rounded-clay-sm border border-pink-100 font-medium inline-flex">
+                <Camera className="w-3 h-3 text-pink-500" />
+                <span>@{business.instagram_handle.replace('@', '')}</span>
+              </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-slate-100/90 px-2 py-0.5 rounded-clay-sm border border-slate-200 font-medium inline-flex">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-clay-sm border border-slate-200/80 font-medium inline-flex">
                 <Camera className="w-3 h-3 text-slate-400" />
-                <span>{business.instagram_handle ? `@${business.instagram_handle}` : 'Social Audit Pending'}</span>
+                <span>Social Audit Pending</span>
               </div>
             )}
           </div>
@@ -267,11 +272,11 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           {/* Google Maps Search Button - Opens Verified Google Place Card */}
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-              business.name + ' ' + (business.area || '') + ' ' + (business.city || '')
+              [business.name, business.area, business.city].filter(Boolean).join(' ')
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            title={`Search ${business.name} on Google Maps`}
+            title={`Search verified Google Place profile for ${business.name}`}
             className="px-2 py-1 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-clay-border/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
           >
             <MapPin className="w-3 h-3 text-rose-500" />
@@ -286,7 +291,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
               }
               target="_blank"
               rel="noopener noreferrer"
-              title={`Open ${business.name} on Instagram`}
+              title={`Open @${business.instagram_handle.replace('@', '')} on Instagram`}
               className="px-2 py-1 rounded-clay-sm bg-white hover:bg-pink-50 text-pink-700 border border-pink-200/80 shadow-clay-btn flex items-center gap-1 text-xs font-medium transition active:translate-y-0.5"
             >
               <Instagram className="w-3 h-3" />
@@ -294,14 +299,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             </a>
           ) : (
             <a
-              href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" "' + (business.city || business.area) + '"')}`}
+              href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || business.area || ''))}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="Search Google for social footprint"
-              className="px-2 py-1 rounded-clay-sm bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1 text-[11px] font-medium"
+              title="Search Google for authentic indexed Instagram profile"
+              className="px-2 py-1 rounded-clay-sm bg-white hover:bg-pink-50 text-slate-600 hover:text-pink-700 border border-slate-200 hover:border-pink-200 flex items-center gap-1 text-[11px] font-medium transition active:translate-y-0.5"
             >
-              <Instagram className="w-3 h-3 text-slate-400" />
-              <span>Audit IG</span>
+              <Instagram className="w-3 h-3 text-pink-500" />
+              <span>Find IG</span>
             </a>
           )}
 
@@ -310,13 +315,18 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
               href={business.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-clay-btn transition active:translate-y-0.5"
+              title={`Visit official website: ${business.website}`}
+              className="px-2 py-1 rounded-clay-sm bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-clay-btn transition active:translate-y-0.5 flex items-center gap-1 text-xs font-medium"
             >
-              <Globe className="w-3.5 h-3.5" />
+              <Globe className="w-3.5 h-3.5 text-blue-600" />
+              <span>Site</span>
             </a>
           ) : (
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-              No Website
+            <span
+              className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-800 border border-amber-200/80"
+              title="No website registered in commercial registry or OpenStreetMap — pitch agency web presence"
+            >
+              Unregistered Website
             </span>
           )}
         </div>

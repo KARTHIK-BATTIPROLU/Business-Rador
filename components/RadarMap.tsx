@@ -11,6 +11,8 @@ interface RadarMapProps {
   selectedBusiness?: Business | null;
   onSelectBusiness: (b: Business) => void;
   flyToCoords?: { lat: number; lng: number; zoom?: number } | null;
+  onScanViewport?: (coords: { lat: number; lng: number; radius: number }) => void;
+  isScanning?: boolean;
 }
 
 const MAP_STYLES = {
@@ -20,7 +22,53 @@ const MAP_STYLES = {
 };
 
 export const AREA_COORDINATES: Record<string, [number, number]> = {
-  // Hyderabad Corridors
+  // Global & Continents
+  Global: [-97.7431, 30.2672],
+  World: [0, 20],
+
+  // United States Metros & Corridors
+  'South Congress': [-97.7495, 30.2510],
+  'East Austin': [-97.7210, 30.2635],
+  'Downtown Austin': [-97.7402, 30.2680],
+  Austin: [-97.7431, 30.2672],
+  'Uptown Dallas': [-96.8040, 32.7985],
+  'Deep Ellum': [-96.7845, 32.7835],
+  Dallas: [-96.7970, 32.7767],
+  Montrose: [-95.3910, 29.7420],
+  'The Heights': [-95.3980, 29.7990],
+  Houston: [-95.3698, 29.7604],
+  'San Antonio': [-98.4936, 29.4241],
+  'Fort Worth': [-97.3308, 32.7555],
+  Texas: [-97.7431, 30.2672],
+  SoHo: [-73.9990, 40.7233],
+  Williamsburg: [-73.9571, 40.7178],
+  'West Village': [-74.0048, 40.7358],
+  'New York City': [-73.9851, 40.7488],
+  'West Hollywood': [-118.3617, 34.0900],
+  'Santa Monica': [-118.4912, 34.0195],
+  'Los Angeles': [-118.2437, 34.0522],
+  Wynwood: [-80.1989, 25.8042],
+  Miami: [-80.1918, 25.7617],
+  'The Loop': [-87.6298, 41.8819],
+  'West Loop': [-87.6534, 41.8867],
+  Chicago: [-87.6298, 41.8781],
+  'Mission District': [-122.4192, 37.7599],
+  'San Francisco': [-122.4194, 37.7749],
+
+  // United Kingdom Metros & Corridors
+  Shoreditch: [-0.0785, 51.5245],
+  Soho: [-0.1340, 51.5135],
+  'Covent Garden': [-0.1240, 51.5117],
+  Camden: [-0.1426, 51.5390],
+  Hackney: [-0.0553, 51.5450],
+  'Notting Hill': [-0.2057, 51.5091],
+  London: [-0.1276, 51.5074],
+  'Northern Quarter': [-2.2350, 53.4835],
+  Manchester: [-2.2426, 53.4808],
+  'Old Town Edinburgh': [-3.1890, 55.9486],
+  Edinburgh: [-3.1883, 55.9533],
+
+  // India Metros & Corridors
   Kokapet: [78.3298, 17.4156],
   Gachibowli: [78.3489, 17.44],
   'HITECH City': [78.3908, 17.4486],
@@ -32,26 +80,48 @@ export const AREA_COORDINATES: Record<string, [number, number]> = {
   Kondapur: [78.355, 17.46],
   Narsingi: [78.3588, 17.3883],
   Hyderabad: [78.35, 17.43],
+  Indiranagar: [77.6412, 12.9784],
+  Koramangala: [77.6245, 12.9352],
+  'HSR Layout': [77.6408, 12.9121],
+  Bangalore: [77.5946, 12.9716],
+  'Bandra West': [72.8295, 19.0596],
+  BKC: [72.8682, 19.0657],
+  Mumbai: [72.8777, 19.0760],
+  'Hauz Khas': [77.2065, 28.5494],
+  'Connaught Place': [77.2167, 28.6304],
+  Delhi: [77.2090, 28.6139],
 
-  // Texas Corridors (USA)
-  'South Congress': [-97.7495, 30.2510],
-  'Bouldin Creek': [-97.7565, 30.2480],
-  'East Austin': [-97.7210, 30.2635],
-  'Downtown': [-97.7402, 30.2680],
-  Austin: [-97.7431, 30.2672],
-  Uptown: [-96.8040, 32.7985],
-  'Deep Ellum': [-96.7845, 32.7835],
-  Dallas: [-96.7970, 32.7767],
-  Montrose: [-95.3910, 29.7420],
-  'The Heights': [-95.3980, 29.7990],
-  Houston: [-95.3698, 29.7604],
-  Texas: [-97.7431, 30.2672],
+  // Canada
+  'Queen Street West': [-79.4042, 43.6487],
+  Toronto: [-79.3832, 43.6532],
+  Gastown: [-123.1089, 49.2838],
+  Vancouver: [-123.1207, 49.2827],
 
-  // London Corridors (UK / Europe)
-  Shoreditch: [-0.0785, 51.5245],
-  Soho: [-0.1340, 51.5135],
-  'Covent Garden': [-0.1240, 51.5117],
-  London: [-0.1276, 51.5074],
+  // Australia
+  'Surry Hills': [151.2120, -33.8860],
+  'Bondi Beach': [151.2743, -33.8915],
+  Sydney: [151.2093, -33.8688],
+  Fitzroy: [144.9780, -37.7985],
+  Melbourne: [144.9631, -37.8136],
+
+  // Europe (Germany, France)
+  Mitte: [13.4040, 52.5180],
+  Kreuzberg: [13.4020, 52.4990],
+  Berlin: [13.4050, 52.5200],
+  'Le Marais': [2.3600, 48.8575],
+  'Saint-Germain': [2.3330, 48.8538],
+  Paris: [2.3522, 48.8566],
+
+  // Asia (Japan, UAE, Singapore)
+  Shibuya: [139.7016, 35.6580],
+  Shinjuku: [139.7006, 35.6938],
+  Ginza: [139.7671, 35.6719],
+  Tokyo: [139.6917, 35.6895],
+  'Downtown Dubai': [55.2744, 25.1972],
+  'Dubai Marina': [55.1403, 25.0805],
+  Dubai: [55.2708, 25.2048],
+  'Orchard Road': [103.8340, 1.3048],
+  Singapore: [103.8198, 1.3521],
 };
 
 function createPopupHTML(b: Business): string {
@@ -119,6 +189,8 @@ export const RadarMap: React.FC<RadarMapProps> = ({
   selectedBusiness,
   onSelectBusiness,
   flyToCoords,
+  onScanViewport,
+  isScanning,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
@@ -359,6 +431,29 @@ export const RadarMap: React.FC<RadarMapProps> = ({
   return (
     <div className="relative w-full h-full min-h-[420px] bg-clay-canvas overflow-hidden">
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Floating Center "Scan Current Map View" Trigger */}
+      {onScanViewport && (
+        <button
+          onClick={() => {
+            if (!mapInstance.current || isScanning) return;
+            const center = mapInstance.current.getCenter();
+            const zoom = mapInstance.current.getZoom();
+            const radius = Math.min(5000, Math.max(900, Math.round(40000000 / Math.pow(2, zoom + 1))));
+            onScanViewport({ lat: center.lat, lng: center.lng, radius });
+          }}
+          disabled={isScanning}
+          className={`absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs shadow-lg border transition-all active:scale-95 ${
+            isScanning
+              ? 'bg-blue-600 text-white border-blue-400 shadow-blue-500/30 animate-pulse cursor-wait'
+              : 'bg-white/95 hover:bg-accent-blue text-clay-text hover:text-white border-clay-border/80 shadow-clay-card'
+          }`}
+          title="Scan newly opened physical businesses in this visible area"
+        >
+          <Crosshair className={`w-4 h-4 text-rose-500 ${isScanning ? 'animate-spin' : ''}`} />
+          <span>{isScanning ? 'Scanning Map Corridors...' : '🎯 Scan Current Map View'}</span>
+        </button>
+      )}
 
       {/* Clay Floating Map Style Control */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 p-1 rounded-clay bg-white/90 backdrop-blur-md shadow-clay-card border border-clay-border/80 text-xs">
