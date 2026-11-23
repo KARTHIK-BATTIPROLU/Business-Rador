@@ -23,6 +23,57 @@ export interface MediaPhoto {
   posted_at?: string;
 }
 
+export interface DeepResearchResult {
+  researched_at: string;
+  business_overview: string;
+  target_decision_maker: {
+    probable_role: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    preferred_channel: 'email' | 'instagram' | 'whatsapp' | 'phone';
+  };
+  google_presence: {
+    rating: number;
+    review_count: number;
+    sentiment_summary: string;
+    missing_elements: string[];
+  };
+  social_presence: {
+    instagram_handle?: string | null;
+    instagram_status: string;
+    engagement_rate?: string;
+    key_themes: string[];
+  };
+  corridor_competition: {
+    nearby_competitors: Array<{ name: string; distance: string; advantage: string }>;
+    vulnerability_gap: string;
+  };
+  outreach_pack: {
+    cold_email: {
+      subject_line: string;
+      preview_text: string;
+      body: string;
+      target_email: string;
+    };
+    instagram_dm: {
+      message: string;
+      follow_up_message: string;
+      direct_message_url: string;
+      instagram_handle: string;
+    };
+    whatsapp_message: {
+      text: string;
+      direct_wa_url: string;
+    };
+    phone_script: {
+      opener: string;
+      hook: string;
+      closing_ask: string;
+    };
+  };
+}
+
 export interface BusinessDossier {
   verified_address?: string;
   hours?: string;
@@ -77,6 +128,7 @@ export interface Business {
   outreach_notes?: string | null;
   contacted_at?: string | null;
   dossier?: BusinessDossier;
+  deep_research?: DeepResearchResult;
   is_enriched?: boolean;
   last_enriched_at?: string | null;
   instagram_verified?: boolean | null;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Business, OutreachStatus, MediaPhoto } from '@/lib/types';
+import { Business, OutreachStatus, MediaPhoto, DeepResearchResult } from '@/lib/types';
 import {
   ArrowLeft,
   Phone,
@@ -29,7 +29,12 @@ import {
   X,
   Share2,
   RefreshCw,
-  Search
+  Search,
+  Mail,
+  Target,
+  UserCheck,
+  ShieldAlert,
+  FileText
 } from 'lucide-react';
 
 export default function BusinessDetailsPage() {
@@ -45,6 +50,18 @@ export default function BusinessDetailsPage() {
   const [activeMediaTab, setActiveMediaTab] = useState<'all' | 'google' | 'instagram'>('all');
   const [lightboxPhoto, setLightboxPhoto] = useState<MediaPhoto | null>(null);
 
+  // Deep Research state
+  const [deepResearch, setDeepResearch] = useState<DeepResearchResult | null>(null);
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchStep, setResearchStep] = useState(0);
+  const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
+
+  // Editable outbound content
+  const [outboundEmail, setOutboundEmail] = useState({ to: '', subject: '', body: '' });
+  const [outboundDm, setOutboundDm] = useState({ handle: '', message: '', followUp: '' });
+  const [outboundWa, setOutboundWa] = useState('');
+  const [activeOutboundTab, setActiveOutboundTab] = useState<'email' | 'instagram' | 'whatsapp' | 'call'>('email');
+
   // Outreach & Pitch state
   const [activePitchTab, setActivePitchTab] = useState<'whatsapp' | 'call' | 'email'>('whatsapp');
   const [copiedPitch, setCopiedPitch] = useState(false);
@@ -53,6 +70,89 @@ export default function BusinessDetailsPage() {
   const [notesSaved, setNotesSaved] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichMeta, setEnrichMeta] = useState<{ status?: string; verified?: boolean } | null>(null);
+
+  const initOutboundFields = (b: Business, dr?: DeepResearchResult) => {
+    const pack = dr?.outreach_pack;
+    const cleanSlug = b.name.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || 'business';
+
+    setOutboundEmail({
+      to: pack?.cold_email?.target_email || b.email || `contact@${cleanSlug}.com`,
+      subject: pack?.cold_email?.subject_line || `Quick question about ${b.name}'s new ${b.city} launch`,
+      body: pack?.cold_email?.body || b.dossier?.cold_email_pitch || '',
+    });
+
+    setOutboundDm({
+      handle: pack?.instagram_dm?.instagram_handle || (b.instagram_handle ? b.instagram_handle.replace('@', '') : cleanSlug),
+      message: pack?.instagram_dm?.message || `Hey @${b.instagram_handle ? b.instagram_handle.replace('@', '') : cleanSlug} team! 👏 Stumbled across your new spot in ${b.area}. Love what you're building! Quick question regarding your online booking setup...`,
+      followUp: pack?.instagram_dm?.follow_up_message || `Hey team, just following up in case this got buried! Put together a 60-second video mockup for ${b.name}. Mind if I drop the link?`,
+    });
+
+    setOutboundWa(pack?.whatsapp_message?.text || b.dossier?.whatsapp_pitch || '');
+  };
+
+  const handleRunDeepResearch = async () => {
+    if (!business || isResearching) return;
+    setIsResearching(true);
+    setResearchStep(1);
+
+    const stepTimer = setInterval(() => {
+      setResearchStep((prev) => (prev < 4 ? prev + 1 : prev));
+    }, 650);
+
+    try {
+      const res = await fetch(`/api/businesses/${business.id}/deep-research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business }),
+      });
+      const data = await res.json();
+      clearInterval(stepTimer);
+      setResearchStep(4);
+
+      if (data.success && data.deep_research) {
+        setDeepResearch(data.deep_research);
+        const updatedBiz: Business = {
+          ...business,
+          deep_research: data.deep_research,
+        };
+        setBusiness(updatedBiz);
+        initOutboundFields(updatedBiz, data.deep_research);
+
+        try {
+          const cached = localStorage.getItem('radar_cached_businesses');
+          if (cached) {
+            const list: Business[] = JSON.parse(cached);
+            const nextList = list.map((b) => (b.id === business.id ? updatedBiz : b));
+            localStorage.setItem('radar_cached_businesses', JSON.stringify(nextList));
+          }
+        } catch {}
+      }
+    } catch (err) {
+      console.error('Deep research failed:', err);
+    } finally {
+      clearInterval(stepTimer);
+      setIsResearching(false);
+    }
+  };
+
+  const copyChannelContent = (channel: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedChannel(channel);
+    setTimeout(() => setCopiedChannel(null), 2500);
+  };
+
+  const handleCopyAndOpenInstagram = () => {
+    navigator.clipboard.writeText(outboundDm.message);
+    setCopiedChannel('dm_open');
+    setTimeout(() => setCopiedChannel(null), 2500);
+
+    const cleanHandle = (outboundDm.handle || business?.instagram_handle || '').replace('@', '').trim();
+    if (cleanHandle) {
+      window.open(`https://ig.me/m/${cleanHandle}`, '_blank');
+    } else {
+      window.open(`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + (business?.name || '') + '" ' + (business?.city || ''))}`, '_blank');
+    }
+  };
 
   const triggerLiveEnrichment = async (force: boolean = false) => {
     if (!businessId || isEnriching) return;
@@ -88,6 +188,10 @@ export default function BusinessDetailsPage() {
         if (data.success && data.business) {
           setBusiness(data.business);
           setNotes(data.business.outreach_notes || '');
+          if (data.business.deep_research) {
+            setDeepResearch(data.business.deep_research);
+          }
+          initOutboundFields(data.business, data.business.deep_research);
           // Trigger JIT live enrichment if not yet enriched
           if (!data.business.is_enriched) {
             triggerLiveEnrichment(false);
@@ -106,6 +210,10 @@ export default function BusinessDetailsPage() {
           if (foundInCache) {
             setBusiness(foundInCache);
             setNotes(foundInCache.outreach_notes || '');
+            if (foundInCache.deep_research) {
+              setDeepResearch(foundInCache.deep_research);
+            }
+            initOutboundFields(foundInCache, foundInCache.deep_research);
           } else {
             setError(data.error || 'Business not found');
           }
@@ -123,6 +231,10 @@ export default function BusinessDetailsPage() {
         if (foundInCache) {
           setBusiness(foundInCache);
           setNotes(foundInCache.outreach_notes || '');
+          if (foundInCache.deep_research) {
+            setDeepResearch(foundInCache.deep_research);
+          }
+          initOutboundFields(foundInCache, foundInCache.deep_research);
         } else {
           setError(err.message || 'Failed to load business dossier');
         }
@@ -328,6 +440,21 @@ Business Radar Partner Team`;
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isEnriching ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">{isEnriching ? 'Searching Live...' : '⚡ Live Enrich Visuals'}</span>
+          </button>
+
+          {/* Quick Header Deep Research Trigger */}
+          <button
+            onClick={() => {
+              const el = document.getElementById('deep-research-center');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              if (!deepResearch) handleRunDeepResearch();
+            }}
+            disabled={isResearching}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-clay-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-clay-btn transition disabled:opacity-50"
+            title="Run on-demand deep intelligence research & prepare 1-click email/IG pitch"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isResearching ? 'animate-spin' : ''}`} />
+            <span>{isResearching ? 'Researching...' : deepResearch ? '🔬 Deep Intelligence' : '🔬 Deep Research'}</span>
           </button>
 
           {business.whatsapp && (
@@ -578,6 +705,511 @@ Business Radar Partner Team`;
             </div>
           </div>
         </div>
+
+        {/* On-Demand Deep Lead Research & 1-Click Outbound Action Center */}
+        <section id="deep-research-center" className="p-6 rounded-clay bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 border-2 border-blue-200/90 shadow-clay-card space-y-6">
+          {/* Header & Trigger */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-blue-100 pb-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-blue-600 text-white shadow-sm">
+                  <Sparkles className="w-5 h-5" />
+                </span>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Deep Intelligence Research & Outbound Pipeline
+                </h2>
+                <span className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-full bg-blue-100 text-blue-700">
+                  Clay & Instantly Engine
+                </span>
+              </div>
+              <p className="text-xs text-slate-600">
+                Audits local Google Maps footprint, identifies decision makers, crawls nearby competitors, and crafts 1-click Cold Email & Instagram DM campaigns.
+              </p>
+            </div>
+
+            {/* Run Deep Research Button */}
+            <button
+              onClick={handleRunDeepResearch}
+              disabled={isResearching}
+              className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm shadow-md transition-all ${
+                isResearching
+                  ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-lg active:scale-95'
+              }`}
+            >
+              <RefreshCw className={`w-4 h-4 ${isResearching ? 'animate-spin' : ''}`} />
+              <span>
+                {isResearching
+                  ? 'Executing Deep Research...'
+                  : deepResearch
+                  ? 'Re-Run Deep Research'
+                  : '🔬 Run Deep Lead Research'}
+              </span>
+            </button>
+          </div>
+
+          {/* Research Progress Animated Ticker (Active when researching) */}
+          {isResearching && (
+            <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 space-y-3 animate-pulse">
+              <div className="flex items-center justify-between text-xs font-bold text-blue-800">
+                <span>AI Agent Pipeline Running: Stage {researchStep} of 4</span>
+                <span>{researchStep === 1 ? '25%' : researchStep === 2 ? '50%' : researchStep === 3 ? '75%' : '100%'}</span>
+              </div>
+              <div className="w-full bg-blue-200 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-blue-600 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${researchStep * 25}%` }}
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                <div className={`p-2 rounded-lg border ${researchStep >= 1 ? 'bg-white text-blue-900 border-blue-300 font-bold' : 'text-slate-400 border-dashed border-slate-200'}`}>
+                  1. Local Corridor Competitors
+                </div>
+                <div className={`p-2 rounded-lg border ${researchStep >= 2 ? 'bg-white text-blue-900 border-blue-300 font-bold' : 'text-slate-400 border-dashed border-slate-200'}`}>
+                  2. Google & Instagram Audit
+                </div>
+                <div className={`p-2 rounded-lg border ${researchStep >= 3 ? 'bg-white text-blue-900 border-blue-300 font-bold' : 'text-slate-400 border-dashed border-slate-200'}`}>
+                  3. Decision-Maker Synthesis
+                </div>
+                <div className={`p-2 rounded-lg border ${researchStep >= 4 ? 'bg-white text-blue-900 border-blue-300 font-bold' : 'text-slate-400 border-dashed border-slate-200'}`}>
+                  4. Tailored Outbound Copy
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty Prompt State when Deep Research hasn't run yet */}
+          {!deepResearch && !isResearching && (
+            <div className="p-6 rounded-xl bg-slate-50 border border-dashed border-slate-300 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <Target className="w-6 h-6" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h4 className="font-bold text-sm text-slate-800">No Deep Research Dossier Generated Yet</h4>
+                <p className="text-xs text-slate-500">
+                  Click the button above to run real-time competitive analysis, uncover high-probability decision-maker contact details, and craft targeted cold email & Instagram DM campaigns.
+                </p>
+              </div>
+              <button
+                onClick={handleRunDeepResearch}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Start Research Pipeline</span>
+              </button>
+            </div>
+          )}
+
+          {/* Research Results Intelligence Grid (When deepResearch is present) */}
+          {deepResearch && (
+            <div className="space-y-6">
+              {/* Executive Summary & Key Angles */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Decision Maker Card */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                    <UserCheck className="w-4 h-4 text-indigo-600" />
+                    <span>Target Decision Maker</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {deepResearch.target_decision_maker.probable_role}
+                  </div>
+                  <div className="space-y-1 text-xs text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-mono text-[11px] select-all">{deepResearch.target_decision_maker.contact_email}</span>
+                    </div>
+                    {deepResearch.target_decision_maker.contact_phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-mono text-[11px]">{deepResearch.target_decision_maker.contact_phone}</span>
+                      </div>
+                    )}
+                    <div className="text-[11px] pt-1 text-indigo-900 font-medium">
+                      Primary Channel: <span className="font-bold uppercase text-indigo-600">{deepResearch.target_decision_maker.preferred_channel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Google & Social Audit Card */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-700 uppercase tracking-wider">
+                    <Radio className="w-4 h-4 text-blue-600" />
+                    <span>Footprint Audit</span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                    <span>Google Maps: {deepResearch.google_presence.review_count > 0 ? '⭐ Verified Listing' : '⚠️ Unverified'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">
+                      {deepResearch.google_presence.rating} ★ ({deepResearch.google_presence.review_count} revs)
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-600 line-clamp-2">
+                    {deepResearch.google_presence.sentiment_summary}
+                  </div>
+                  <div className="text-[11px] text-pink-700 font-medium flex items-center gap-1 pt-1">
+                    <Instagram className="w-3.5 h-3.5 shrink-0" />
+                    <span>{deepResearch.social_presence.instagram_status}</span>
+                  </div>
+                </div>
+
+                {/* Competitive Vulnerability Card */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-wider">
+                    <ShieldAlert className="w-4 h-4 text-amber-600" />
+                    <span>Corridor Vulnerability Gap</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-800">
+                    Why They Must Act Now:
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {deepResearch.corridor_competition.vulnerability_gap}
+                  </p>
+                  <div className="text-[11px] text-emerald-700 font-semibold pt-1">
+                    ✨ Recommended Angle: Pitch 0% commission direct booking website before competitors dominate.
+                  </div>
+                </div>
+              </div>
+
+              {/* Nearby Competitors in Same Corridor */}
+              {deepResearch.corridor_competition.nearby_competitors.length > 0 && (
+                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                      Local Corridor Competitors ({business.area || business.city})
+                    </span>
+                    <span className="text-[11px] text-slate-500">Benchmark against local market</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {deepResearch.corridor_competition.nearby_competitors.map((comp, idx) => (
+                      <div key={idx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+                        <div className="flex items-center justify-between font-bold text-slate-900">
+                          <span>{comp.name}</span>
+                          <span className="text-[10px] text-slate-500 font-normal">{comp.distance}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          <span className="font-semibold text-slate-700">Digital Advantage:</span> {comp.advantage}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 1-Click Multi-Channel Outbound Action Center */}
+              <div className="p-5 rounded-2xl bg-white border-2 border-indigo-100 shadow-md space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <Send className="w-4 h-4 text-indigo-600" />
+                      1-Click Multi-Channel Outreach Dispatcher
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Pre-formatted with deep research insights. One click opens Gmail draft, Instagram DM thread, or WhatsApp.
+                    </p>
+                  </div>
+
+                  {/* Channel Switcher */}
+                  <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+                    <button
+                      onClick={() => setActiveOutboundTab('email')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                        activeOutboundTab === 'email'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Cold Email</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveOutboundTab('instagram')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                        activeOutboundTab === 'instagram'
+                          ? 'bg-pink-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Instagram className="w-3.5 h-3.5" />
+                      <span>Instagram DM</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveOutboundTab('whatsapp')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                        activeOutboundTab === 'whatsapp'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveOutboundTab('call')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                        activeOutboundTab === 'call'
+                          ? 'bg-slate-800 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call Script</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* TAB 1: COLD EMAIL */}
+                {activeOutboundTab === 'email' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <span>Recipient Email:</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={outboundEmail.to}
+                          onChange={(e) => setOutboundEmail({ ...outboundEmail, to: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 font-mono text-xs focus:bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <span>Subject Line:</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={outboundEmail.subject}
+                          onChange={(e) => setOutboundEmail({ ...outboundEmail, subject: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs font-semibold focus:bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <label className="font-bold text-slate-700">Email Pitch Body:</label>
+                      <textarea
+                        rows={6}
+                        value={outboundEmail.body}
+                        onChange={(e) => setOutboundEmail({ ...outboundEmail, body: e.target.value })}
+                        className="w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-xs leading-relaxed font-mono focus:bg-white focus:border-blue-500 outline-none resize-none"
+                      />
+                    </div>
+
+                    {/* 1-Click Send Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        {/* 1-Click Native Mail Client */}
+                        <a
+                          href={`mailto:${outboundEmail.to}?subject=${encodeURIComponent(outboundEmail.subject)}&body=${encodeURIComponent(outboundEmail.body)}`}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition active:scale-95"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>1-Click Send via Mail Client</span>
+                        </a>
+
+                        {/* 1-Click Gmail Web Composer */}
+                        <a
+                          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(outboundEmail.to)}&su=${encodeURIComponent(outboundEmail.subject)}&body=${encodeURIComponent(outboundEmail.body)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-sm transition"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>1-Click Gmail Draft</span>
+                        </a>
+                      </div>
+
+                      {/* Copy All */}
+                      <button
+                        onClick={() => copyChannelContent('email', `Subject: ${outboundEmail.subject}\n\n${outboundEmail.body}`)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                      >
+                        {copiedChannel === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedChannel === 'email' ? 'Copied to Clipboard!' : 'Copy Subject & Body'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: INSTAGRAM DM */}
+                {activeOutboundTab === 'instagram' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                          <span>Instagram Handle (without @):</span>
+                        </label>
+                        <div className="flex items-center">
+                          <span className="px-3 py-2 rounded-l-lg bg-slate-200 border border-r-0 border-slate-300 font-mono text-xs text-slate-600">@</span>
+                          <input
+                            type="text"
+                            value={outboundDm.handle}
+                            onChange={(e) => setOutboundDm({ ...outboundDm, handle: e.target.value.replace('@', '') })}
+                            placeholder="username"
+                            className="w-full px-3 py-2 rounded-r-lg bg-slate-50 border border-slate-300 font-mono text-xs focus:bg-white focus:border-pink-500 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-end">
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + business.name + '" ' + (business.city || ''))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                        >
+                          <Search className="w-3.5 h-3.5 text-pink-600" />
+                          <span>Find verified handle on Google</span>
+                          <ExternalLink className="w-3 h-3 text-slate-400" />
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-700">Opening Hook DM (Casual & High-Converting):</label>
+                        <span className="text-[11px] text-pink-600 font-medium">Keep under 60 words for 45% reply rate</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={outboundDm.message}
+                        onChange={(e) => setOutboundDm({ ...outboundDm, message: e.target.value })}
+                        className="w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-xs leading-relaxed font-sans focus:bg-white focus:border-pink-500 outline-none resize-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <label className="font-bold text-slate-700">Day 3 Follow-Up Bump Message:</label>
+                      <textarea
+                        rows={2}
+                        value={outboundDm.followUp}
+                        onChange={(e) => setOutboundDm({ ...outboundDm, followUp: e.target.value })}
+                        className="w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-xs leading-relaxed font-sans focus:bg-white focus:border-pink-500 outline-none resize-none"
+                      />
+                    </div>
+
+                    {/* 1-Click Send Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                      {/* 1-Click Copy & Open Instagram DM */}
+                      <button
+                        onClick={handleCopyAndOpenInstagram}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs shadow-md transition active:scale-95"
+                      >
+                        <Instagram className="w-4 h-4" />
+                        <span>
+                          {copiedChannel === 'dm_open'
+                            ? '✓ Copied Hook! Opening Instagram DM...'
+                            : `⚡ 1-Click Copy & Open Instagram DM (@${outboundDm.handle || 'user'})`}
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Copy Follow-up */}
+                      <button
+                        onClick={() => copyChannelContent('dm_followup', outboundDm.followUp)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                      >
+                        {copiedChannel === 'dm_followup' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedChannel === 'dm_followup' ? 'Copied Follow-up!' : 'Copy Day-3 Bump'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: WHATSAPP */}
+                {activeOutboundTab === 'whatsapp' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1 text-xs">
+                      <label className="font-bold text-slate-700">WhatsApp Message:</label>
+                      <textarea
+                        rows={5}
+                        value={outboundWa}
+                        onChange={(e) => setOutboundWa(e.target.value)}
+                        className="w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-xs leading-relaxed font-mono focus:bg-white focus:border-emerald-500 outline-none resize-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                      {business.whatsapp ? (
+                        <a
+                          href={`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(outboundWa)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition active:scale-95"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>1-Click Send to WhatsApp (+{business.whatsapp})</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-amber-700 font-medium">
+                          No direct WhatsApp registered in public registry. Use Cold Email or Instagram DM above.
+                        </span>
+                      )}
+
+                      <button
+                        onClick={() => copyChannelContent('whatsapp', outboundWa)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                      >
+                        {copiedChannel === 'whatsapp' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedChannel === 'whatsapp' ? 'Copied Message!' : 'Copy Message'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: COLD CALL */}
+                {activeOutboundTab === 'call' && (
+                  <div className="space-y-4 text-xs">
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                      <div>
+                        <span className="font-bold text-slate-900 block mb-0.5">15-Second Opener:</span>
+                        <p className="text-slate-700 italic">
+                          &ldquo;Hi {business.name} team, saw you just opened at {business.area || business.city}! Are you the manager handling digital setup and bookings?&rdquo;
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-700 block mb-0.5">Value Hook:</span>
+                        <p className="text-slate-600">
+                          &ldquo;I noticed nearby competitors on the corridor have direct booking systems set up. We build launch sites that convert local footfall with zero monthly platform commission.&rdquo;
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-700 block mb-0.5">Closing Ask:</span>
+                        <p className="text-slate-600">
+                          &ldquo;Can I email or Instagram DM you a 60-second video demo showing how it works? No cost at all.&rdquo;
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      {business.phone ? (
+                        <a
+                          href={`tel:${business.phone}`}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call {business.phone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500">No public phone number in registry.</span>
+                      )}
+
+                      <button
+                        onClick={() => copyChannelContent('call', coldCallScriptText)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                      >
+                        {copiedChannel === 'call' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedChannel === 'call' ? 'Copied Script!' : 'Copy Script'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Visual Media Gallery: Google Storefront & Instagram Photos */}
         <section className="p-6 rounded-clay bg-white border border-clay-border/80 shadow-clay-card space-y-5">
