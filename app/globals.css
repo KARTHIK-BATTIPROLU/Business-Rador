@@ -2,72 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tokens — see docs/DESIGN.md. Stored as RGB triplets so Tailwind can apply alpha. */
 :root {
-  --background: #f6f7f9;
-  --foreground: #192130;
+  --paper: 245 239 228; /* #F5EFE4 */
+  --surface: 251 247 239; /* #FBF7EF */
+  --sunk: 235 227 211; /* #EBE3D3 */
+  --ink: 27 22 18; /* #1B1612 */
+  --walnut: 90 70 54; /* #5A4636 */
+  --tan: 138 106 79; /* #8A6A4F */
+  --hairline: 205 187 163; /* #CDBBA3 */
+  --accent: 194 86 43; /* #C2562B terracotta: marks, rings, stamp */
+  --accent-strong: 168 70 31; /* #A8461F: accent that carries text */
+  --accent-wash: 244 222 206; /* #F4DECE: selected/hover tint */
+  --olive: 107 122 58; /* #6B7A3A */
+  --olive-deep: 86 99 43; /* #56632B */
+  --ochre: 200 150 46; /* #C8962E */
+  --ochre-deep: 138 100 20; /* #8A6414 */
+  --brick: 163 59 43; /* #A33B2B */
+  --stone: 140 129 116; /* #8C8174 */
+  --stone-deep: 110 100 88; /* #6E6458 */
+  color-scheme: light;
 }
 
-body {
-  color: var(--foreground);
-  background-color: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper font-sans text-base text-ink antialiased;
+    /* Paper grain: fractal noise at ~3.5%, page background only. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.21 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    font-feature-settings: 'ss01' on;
+  }
+  h1, h2, h3 {
+    @apply font-display tracking-display text-ink;
+    font-optical-sizing: auto;
+    font-weight: 500;
+  }
+  ::selection {
+    background: rgb(var(--accent-wash));
+    color: rgb(var(--ink));
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--ink));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-/* Claymorphic Utility Classes */
-.clay-box {
-  background: #ffffff;
-  box-shadow: 
-    0 12px 28px -6px rgba(15, 23, 42, 0.05),
-    0 4px 10px -2px rgba(15, 23, 42, 0.02),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+@layer components {
+  .hairline {
+    @apply border border-hairline;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgb(var(--sunk)) 0%, rgb(var(--surface)) 50%, rgb(var(--sunk)) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-ctl;
+  }
 }
 
-.clay-interactive {
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--hairline)); border-radius: 8px; border: 2px solid rgb(var(--paper)); }
 
-.clay-interactive:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 
-    0 16px 32px -8px rgba(15, 23, 42, 0.07),
-    0 6px 12px -3px rgba(15, 23, 42, 0.03),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -2px 4px 0 rgba(0, 0, 0, 0.04);
+/* MapLibre popup + controls restyled to the paper palette */
+.maplibregl-popup-content {
+  background: rgb(var(--surface)) !important;
+  border: 1px solid rgb(var(--hairline));
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 0 rgb(var(--ink)) !important;
+  padding: 14px 16px !important;
+  color: rgb(var(--ink));
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
+.maplibregl-popup-tip { border-top-color: rgb(var(--hairline)) !important; border-bottom-color: rgb(var(--hairline)) !important; }
+.maplibregl-popup-close-button { font-size: 18px; width: 32px; height: 32px; color: rgb(var(--walnut)); }
+.maplibregl-ctrl-group { background: rgb(var(--surface)) !important; border: 1px solid rgb(var(--hairline)); border-radius: 6px !important; box-shadow: none !important; }
+.maplibregl-ctrl-group button + button { border-top: 1px solid rgb(var(--hairline)) !important; }
+.maplibregl-ctrl-attrib { background: rgb(var(--paper) / 0.85) !important; font-size: 10px; color: rgb(var(--walnut)); }
+.maplibregl-ctrl-attrib a { color: rgb(var(--walnut)) !important; }
 
-.clay-interactive:active {
-  transform: translateY(0.5px);
-  box-shadow: 
-    inset 0 3px 6px 0 rgba(15, 23, 42, 0.06),
-    0 2px 4px 0 rgba(0, 0, 0, 0.02);
-}
-
-.clay-inset {
-  background: #f1f4f8;
-  box-shadow: 
-    inset 0 2px 4px 0 rgba(15, 23, 42, 0.06),
-    inset 0 1px 2px 0 rgba(15, 23, 42, 0.04),
-    0 1px 0 0 rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(203, 213, 225, 0.6);
-}
-
-/* Tactile minimal scrollbars */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

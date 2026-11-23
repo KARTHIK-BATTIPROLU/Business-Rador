@@ -1,47 +1,70 @@
 /** @type {import('tailwindcss').Config} */
+// All colours resolve to CSS variables in app/globals.css (see docs/DESIGN.md).
+// The default Tailwind palette is removed on purpose so raw `slate-*`/`blue-*`
+// classes cannot sneak back in.
+const v = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 module.exports = {
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      paper: v('paper'),
+      surface: v('surface'),
+      sunk: v('sunk'),
+      ink: v('ink'),
+      walnut: v('walnut'),
+      tan: v('tan'),
+      hairline: v('hairline'),
+      accent: { DEFAULT: v('accent'), strong: v('accent-strong'), wash: v('accent-wash') },
+      status: {
+        new: v('olive'),
+        'new-ink': v('olive-deep'),
+        contacted: v('ochre'),
+        'contacted-ink': v('ochre-deep'),
+        interested: v('brick'),
+        closed: v('stone'),
+        'closed-ink': v('stone-deep'),
+      },
+    },
+    fontFamily: {
+      display: ['var(--font-display)', 'Georgia', 'serif'],
+      sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+      mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+    },
+    fontSize: {
+      // ~1.25 modular scale
+      '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      xs: ['0.75rem', { lineHeight: '1.1rem' }],
+      sm: ['0.875rem', { lineHeight: '1.35rem' }],
+      base: ['1rem', { lineHeight: '1.55' }],
+      lg: ['1.25rem', { lineHeight: '1.4' }],
+      xl: ['1.5625rem', { lineHeight: '1.25' }],
+      '2xl': ['1.9375rem', { lineHeight: '1.15' }],
+      '3xl': ['2.4375rem', { lineHeight: '1.08' }],
+      '4xl': ['3.0625rem', { lineHeight: '1.04' }],
+      '5xl': ['3.8125rem', { lineHeight: '1' }],
+    },
     extend: {
-      colors: {
-        clay: {
-          canvas: "#F6F7F9",
-          surface: "#FFFFFF",
-          subtle: "#F9FAFB",
-          border: "#E2E5E9",
-          text: "#192130",
-          muted: "#64748B",
-          faint: "#94A3B8",
-        },
-        accent: {
-          blue: "#2563EB",
-          blueLight: "#EFF6FF",
-          emerald: "#059669",
-          emeraldLight: "#ECFDF5",
-          amber: "#D97706",
-          amberLight: "#FFFBEB",
-          rose: "#E11D48",
-          roseLight: "#FFF1F2",
-        }
-      },
+      borderRadius: { ctl: '6px', panel: '14px' },
       boxShadow: {
-        'clay-card': '0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 -2px 3px 0 rgba(0, 0, 0, 0.03)',
-        'clay-btn': '0 4px 10px -2px rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.05)',
-        'clay-btn-active': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.02)',
-        'clay-pressed': 'inset 0 3px 6px 0 rgba(0, 0, 0, 0.06), inset 0 1px 2px 0 rgba(0, 0, 0, 0.04)',
-        'clay-pill': '0 2px 6px -1px rgba(0, 0, 0, 0.05), inset 0 1px 0.5px 0 rgba(255, 255, 255, 0.9)',
-        'clay-float': '0 20px 35px -10px rgba(0, 0, 0, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.02), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95)',
+        hard: '4px 4px 0 rgb(var(--ink))',
+        'hard-sm': '2px 2px 0 rgb(var(--ink))',
+        none: 'none',
       },
-      borderRadius: {
-        'clay-sm': '12px',
-        'clay': '18px',
-        'clay-lg': '24px',
-        'clay-xl': '32px',
-      }
+      maxWidth: { prose: '62ch' },
+      letterSpacing: { display: '-0.02em' },
+      transitionTimingFunction: { out: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      keyframes: {
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        sweep: { to: { transform: 'rotate(360deg)' } },
+      },
+      animation: {
+        shimmer: 'shimmer 1.6s ease-out infinite',
+        sweep: 'sweep 9s linear infinite',
+      },
     },
   },
   plugins: [],
-}
+};
