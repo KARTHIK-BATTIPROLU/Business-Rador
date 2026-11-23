@@ -103,7 +103,9 @@ export default function RadarPage() {
       if (filters.status && filters.status !== 'all') params.set('status', filters.status);
       if (filters.search) params.set('search', filters.search);
 
-      const res = await fetch(`/api/businesses?${params.toString()}`);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(`/api/businesses?${params.toString()}`, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
       const data = await res.json();
       if (data.success && Array.isArray(data.businesses) && data.businesses.length > 0) {
         setBusinesses(data.businesses);
@@ -122,7 +124,13 @@ export default function RadarPage() {
       }
     } catch (err) {
       console.error('Error loading businesses:', err);
-      setLoadError(err instanceof Error ? err.message : 'Network error.');
+      setLoadError(
+        err instanceof DOMException && err.name === 'AbortError'
+          ? 'The server took more than 15 seconds to answer.'
+          : err instanceof Error
+            ? err.message
+            : 'Network error.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -274,9 +282,9 @@ export default function RadarPage() {
           <Link href="/" aria-label="Business Radar home" className="mr-1 sm:mr-3 min-h-11 inline-flex items-center">
             <Wordmark compact />
           </Link>
-          <SearchBox value={filters.search} onChange={(v) => updateFilters({ search: v })} className="order-3 basis-full md:order-none md:basis-auto md:flex-1 md:max-w-md" />
-          <div className="order-4 basis-full md:order-none md:basis-auto">
-            <FilterBar filters={filters} onChange={updateFilters} onAreaJump={handleAreaJump} />
+          <div className="order-3 basis-full md:order-none md:basis-auto md:flex-1 flex flex-wrap items-center gap-2">
+            <SearchBox value={filters.search} onChange={(v) => updateFilters({ search: v })} className="flex-1 min-w-[11rem] md:max-w-md" />
+            <FilterBar filters={filters} onChange={updateFilters} onAreaJump={handleAreaJump} className="contents" />
           </div>
           <Button onClick={handleManualScan} disabled={isScanning} variant="primary" size="md" className="ml-auto">
             {isScanning ? 'Scanning…' : scanLabel}

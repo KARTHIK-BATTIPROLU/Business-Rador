@@ -127,6 +127,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       <Popover
         label="Filters"
+        align="end"
         panelClassName="w-[min(92vw,560px)] p-4 sm:p-5"
         trigger={({ props, open }) => (
           <button {...props} className={buttonClass(open ? 'ink' : 'outline', 'md')}>

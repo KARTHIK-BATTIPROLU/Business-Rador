@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Business, OutreachStatus } from '@/lib/types';
 import { findSampleLead } from '@/lib/sample-leads';
 import { isSample } from '@/lib/lead';
+import { enrichBusinessWithMedia } from '@/lib/media-helpers';
 
 function fromCache(id: string): Business | null {
   try {
@@ -65,7 +66,7 @@ export function useDossier(businessId: string | undefined) {
       setError(null);
       const sample = findSampleLead(businessId);
       if (sample) {
-        use(sample);
+        use(enrichBusinessWithMedia(sample));
         setIsLoading(false);
         return;
       }

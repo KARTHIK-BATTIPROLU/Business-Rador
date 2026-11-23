@@ -96,7 +96,7 @@ export function Presence({ b }: { b: Business }) {
     <section aria-labelledby="presence">
       <SectionHead id="presence" title="Presence" note="What exists online today, and what doesn't." />
       <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] gap-x-10 gap-y-10">
-        <div className="rounded-panel border border-ink bg-surface p-5 sm:p-6 md:row-span-2">
+        <div className="rounded-panel border border-ink bg-surface p-5 sm:p-6 self-start">
           <div className="flex items-center gap-2 text-sm text-walnut">
             <Globe aria-hidden className="size-4 stroke-[1.5]" /> Website
           </div>
@@ -131,8 +131,8 @@ export function Presence({ b }: { b: Business }) {
           )}
         </div>
         <Block title="Opening" rows={rows} />
+        <Block title="On the map" rows={place} />
         <Block title="Instagram" rows={ig} />
-        <Block title="On the map" rows={place} className="md:col-start-1" />
       </div>
     </section>
   );

@@ -24,6 +24,15 @@ type StyleKey = keyof typeof MAP_STYLES;
 
 const HOME: [number, number] = [78.36, 17.43];
 
+// If the CARTO style can't be fetched (offline, blocked network), fall back to a
+// plain paper background so the leads still plot.
+const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
+  sources: {},
+  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#F5EFE4' } }],
+};
+
 export { AREA_COORDINATES } from '@/lib/areas';
 
 /* Palette for the basemap (hex because MapLibre paint props don't read CSS vars). */
@@ -183,9 +192,21 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
       attributionControl: { compact: true },
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    let loaded = false;
     map.on('style.load', () => {
+      loaded = true;
       install(map);
       setReady(true);
+    });
+    const fallback = () => {
+      if (loaded) return;
+      loaded = true;
+      map.setStyle(FALLBACK_STYLE);
+    };
+    const fallbackTimer = setTimeout(fallback, 8000);
+    map.on('error', (e) => {
+      const msg = String((e as { error?: { message?: string } }).error?.message ?? '');
+      if (!loaded && /style|fetch|Failed/i.test(msg)) fallback();
     });
 
     map.on('click', 'radar-clusters', async (e) => {
@@ -230,6 +251,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
 
     mapRef.current = map;
     return () => {
+      clearTimeout(fallbackTimer);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -263,8 +285,8 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
   };
 
   return (
-    <div className={cn('relative w-full h-full min-h-[320px] bg-paper overflow-hidden', className)}>
-      <div ref={container} className="absolute inset-0" aria-label="Map of discovered leads" role="region" />
+    <div className={cn('absolute inset-0 bg-paper overflow-hidden', className)}>
+      <div ref={container} className="w-full h-full" aria-label="Map of discovered leads" role="region" />
 
       {/* Radar sweep: the only looping animation in the product. Off under reduced motion. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden motion-reduce:hidden">

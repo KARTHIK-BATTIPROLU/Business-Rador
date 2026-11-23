@@ -23,6 +23,8 @@ export const StatsBar: React.FC<StatsBarProps> = ({ businesses, selectedArea, cl
   const contacted = businesses.filter((b) => b.outreach_status === 'contacted').length;
   const where = selectedArea && selectedArea !== 'all' ? `in ${selectedArea}` : 'on the map';
 
+  if (total === 0) return null;
+
   const N = ({ v, hot }: { v: number; hot?: boolean }) => (
     <strong className={cn('font-mono font-medium tabular', hot ? 'text-accent-strong' : 'text-ink')}>
       <NumberTicker value={v} key={v} />
