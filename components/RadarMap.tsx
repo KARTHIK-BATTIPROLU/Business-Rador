@@ -15,6 +15,12 @@ interface RadarMapProps {
   /** Scan whatever the map is showing: centre + a radius derived from zoom. */
   onScanViewport?: (coords: { lat: number; lng: number; radius: number }) => void;
   isScanning?: boolean;
+  /** Where a running scan is looking; shows ripple rings there. */
+  scanFocus?: { lat: number; lng: number } | null;
+  /** Lead hovered in the list: its pin pulses. */
+  hoveredId?: string | null;
+  onHoverBusiness?: (id: string | null) => void;
+  onCenterChange?: (c: { lat: number; lng: number }) => void;
   className?: string;
 }
 
@@ -152,7 +158,25 @@ const toGeoJSON = (items: Business[]): GeoJSON.FeatureCollection<GeoJSON.Point> 
 
 const escapeHTML = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness, onSelectBusiness, flyToCoords, onScanViewport, isScanning, className }) => {
+export const RadarMap: React.FC<RadarMapProps> = ({
+  businesses,
+  selectedBusiness,
+  onSelectBusiness,
+  flyToCoords,
+  onScanViewport,
+  isScanning,
+  scanFocus,
+  hoveredId,
+  onHoverBusiness,
+  onCenterChange,
+  className,
+}) => {
+  const hoverCb = useRef(onHoverBusiness);
+  hoverCb.current = onHoverBusiness;
+  const centerCb = useRef(onCenterChange);
+  centerCb.current = onCenterChange;
+  const pulseRef = useRef<maplibregl.Marker | null>(null);
+  const rippleRef = useRef<maplibregl.Marker | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const dataRef = useRef<Business[]>(businesses);
@@ -268,6 +292,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
       map.getCanvas().style.cursor = 'pointer';
       const f = e.features?.[0];
       if (!f) return;
+      hoverCb.current?.(String(f.properties?.id ?? '') || null);
       hoverRef.current?.remove();
       hoverRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'radar-hover' })
         .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
@@ -283,7 +308,14 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
     map.on('mouseleave', 'radar-point', () => {
       map.getCanvas().style.cursor = '';
       hoverRef.current?.remove();
+      hoverCb.current?.(null);
     });
+    const reportCenter = () => {
+      const c = map.getCenter();
+      centerCb.current?.({ lat: c.lat, lng: c.lng });
+    };
+    map.on('moveend', reportCenter);
+    map.once('load', reportCenter);
     map.on('mouseenter', 'radar-clusters', () => (map.getCanvas().style.cursor = 'pointer'));
     map.on('mouseleave', 'radar-clusters', () => (map.getCanvas().style.cursor = ''));
 
@@ -329,6 +361,33 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
     }
   }, [selectedBusiness, ready]);
 
+  // Pulse ring on the pin of the lead hovered in the list.
+  useEffect(() => {
+    const map = mapRef.current;
+    pulseRef.current?.remove();
+    pulseRef.current = null;
+    if (!map || !hoveredId) return;
+    const b = dataRef.current.find((x) => x.id === hoveredId);
+    if (!b?.lat || !b?.lng) return;
+    const el = document.createElement('div');
+    el.className = 'radar-pulse';
+    el.setAttribute('aria-hidden', 'true');
+    pulseRef.current = new maplibregl.Marker({ element: el }).setLngLat([b.lng, b.lat]).addTo(map);
+  }, [hoveredId, businesses]);
+
+  // Ripple rings where a scan is looking, for as long as it runs.
+  useEffect(() => {
+    const map = mapRef.current;
+    rippleRef.current?.remove();
+    rippleRef.current = null;
+    if (!map || !scanFocus) return;
+    const el = document.createElement('div');
+    el.className = 'radar-ripple';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<span></span><span></span><span></span><i></i>';
+    rippleRef.current = new maplibregl.Marker({ element: el }).setLngLat([scanFocus.lng, scanFocus.lat]).addTo(map);
+  }, [scanFocus]);
+
   const switchStyle = (key: StyleKey) => {
     if (key === styleKey) return;
     setStyleKey(key);
@@ -351,6 +410,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
       {onScanViewport && (
         <button
           type="button"
+          data-tour="scan-area"
           disabled={isScanning}
           onClick={() => {
             const map = mapRef.current;

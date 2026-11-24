@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import { ViewTransitionRouteWatcher } from '@/components/motion/ViewTransitions';
+import { MotionProvider } from '@/components/motion/MotionProvider';
+import { ToastProvider } from '@/components/ui/Toast';
+import { CommandProvider } from '@/components/command/CommandBar';
 
 // Display: Funnel Display (Kristian Möller / NORD ID, Google Fonts). A tight,
 // slightly condensed grotesk with odd, confident details. Set heavy and tight it
@@ -53,7 +57,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen">
+        <ViewTransitionRouteWatcher />
+        <MotionProvider>
+          <ToastProvider>
+            <CommandProvider>{children}</CommandProvider>
+          </ToastProvider>
+        </MotionProvider>
+      </body>
     </html>
   );
 }

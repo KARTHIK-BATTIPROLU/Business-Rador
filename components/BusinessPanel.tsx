@@ -25,6 +25,8 @@ interface BusinessPanelProps {
   error?: string | null;
   header?: React.ReactNode;
   className?: string;
+  hovered?: { id: string; from: 'map' | 'list' } | null;
+  onHover?: (id: string | null) => void;
 }
 
 const sorters: Record<SortKey, (a: Business, b: Business) => number> = {
@@ -47,6 +49,8 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
   error,
   header,
   className,
+  hovered,
+  onHover,
 }) => {
   const [sortBy, setSortBy] = useState<SortKey>('score');
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -56,6 +60,11 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
   useEffect(() => {
     if (selectedId) refs.current[selectedId]?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
   }, [selectedId, reduce]);
+
+  // A pin hovered on the map scrolls its card into view.
+  useEffect(() => {
+    if (hovered?.from === 'map') refs.current[hovered.id]?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+  }, [hovered, reduce]);
 
   const sorted = [...businesses].sort(sorters[sortBy]);
 
@@ -70,7 +79,7 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
   };
 
   return (
-    <section aria-label="Leads" className={cn('flex flex-col h-full min-h-0', className)}>
+    <section aria-label="Leads" data-tour="list" className={cn('flex flex-col h-full min-h-0', className)}>
       <div className="px-4 pt-4 pb-3 border-b border-hairline space-y-3">
         {header}
         <div className="flex items-center justify-between gap-2">
@@ -101,8 +110,9 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
       </div>
 
       <div ref={listRef} onKeyDown={onListKey} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
+        <AnimatePresence mode="wait" initial={false}>
         {isLoading && businesses.length === 0 ? (
-          <ul className="space-y-3" aria-label="Loading leads">
+          <motion.ul key="loading" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="space-y-3" aria-label="Loading leads">
             {[0, 1, 2, 3].map((i) => (
               <li key={i} className="rounded-panel border border-hairline bg-surface p-4 space-y-3">
                 <div className="flex justify-between gap-3">
@@ -119,9 +129,9 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
             <li className="sr-only" role="status">
               Loading leads
             </li>
-          </ul>
+          </motion.ul>
         ) : error ? (
-          <div role="alert" className="rounded-panel border border-status-interested/50 bg-surface p-5">
+          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="alert" className="rounded-panel border border-status-interested/50 bg-surface p-5">
             <h3 className="text-lg">The radar couldn&apos;t load leads.</h3>
             <p className="mt-2 text-sm text-walnut">{error}</p>
             <p className="mt-2 text-sm text-walnut">Check your connection, then try again. Your notes are safe.</p>
@@ -130,9 +140,9 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
                 Try again
               </Button>
             )}
-          </div>
+          </motion.div>
         ) : sorted.length === 0 ? (
-          <div className="px-2 py-10">
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-2 py-10">
             <Radar aria-hidden className="size-7 stroke-[1.5] text-tan" />
             <h3 className="mt-4 text-xl">Nothing here yet.</h3>
             <p className="mt-2 text-sm text-walnut max-w-[34ch]">
@@ -150,11 +160,11 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
                 </Button>
               )}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <ul className="space-y-3">
+          <motion.ul key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="space-y-3">
             <AnimatePresence initial={false}>
-              {sorted.map((b) => (
+              {sorted.map((b, idx) => (
                 <motion.li
                   key={b.id}
                   layout={reduce ? false : 'position'}
@@ -163,19 +173,22 @@ export const BusinessPanel: React.FC<BusinessPanelProps> = ({
                   exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <div ref={(el) => { refs.current[b.id] = el; }}>
+                  <div ref={(el) => { refs.current[b.id] = el; }} data-tour={idx === 0 ? 'lead-card' : undefined}>
                     <BusinessCard
                       business={b}
                       isSelected={b.id === selectedId}
                       onSelect={() => onSelectBusiness(b)}
                       onStatusChange={(status, notes) => onStatusChange(b.id, status, notes)}
+                      isHovered={hovered?.from === 'map' && hovered.id === b.id}
+                      onHover={onHover ? (h) => onHover(h ? b.id : null) : undefined}
                     />
                   </div>
                 </motion.li>
               ))}
             </AnimatePresence>
-          </ul>
+          </motion.ul>
         )}
+        </AnimatePresence>
       </div>
     </section>
   );

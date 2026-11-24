@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { TransitionLink as Link } from '@/components/motion/ViewTransitions';
 import { ArrowRight, Check, Globe, Instagram, Mail, MapPin, MessageCircle, Phone, X } from 'lucide-react';
 import { Business, OutreachStatus } from '@/lib/types';
 import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreDial } from '@/components/ui/Score';
 import { buttonClass } from '@/components/ui/Button';
-import { instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, spottedAgo, whatsappHref } from '@/lib/lead';
+import { vtTitle, instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, spottedAgo, whatsappHref } from '@/lib/lead';
 import { cn } from '@/lib/utils';
 
 /** Lead detail shown beside the map (desktop drawer) or inside the bottom sheet (mobile). */
@@ -46,14 +46,16 @@ export function LeadDetail({
   };
 
   return (
-    <div className={cn('flex flex-col min-h-0', className)}>
+    <div data-tour="drawer" className={cn('flex flex-col min-h-0', className)}>
       <div className="flex items-start gap-3 px-5 pt-5">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-walnut">
             {b.area}
             {b.city && b.city !== b.area ? `, ${b.city}` : ''} · {b.sub_category || b.category}
           </p>
-          <h2 className="mt-1 text-2xl leading-tight">{b.name}</h2>
+          <h2 className="mt-1 text-2xl leading-tight" style={{ viewTransitionName: vtTitle(b.id) }}>
+            {b.name}
+          </h2>
           {isSample(b) && (
             <Badge tone="sample" className="mt-2 font-mono text-2xs">
               sample lead, not a real shop

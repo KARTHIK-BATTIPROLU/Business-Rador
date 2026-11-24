@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
+import { TransitionLink as Link } from '@/components/motion/ViewTransitions';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'ink' | 'outline' | 'ghost';

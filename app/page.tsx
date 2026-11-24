@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
+import { TransitionLink as Link } from '@/components/motion/ViewTransitions';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Wordmark } from '@/components/ui/primitives';
@@ -68,9 +68,9 @@ export default function LandingPage() {
                 <Button href="/radar" variant="primary" size="lg">
                   Open the map <ArrowRight aria-hidden />
                 </Button>
-                <a href="#how" className="text-sm text-ink underline decoration-hairline underline-offset-4 hover:decoration-ink min-h-11 inline-flex items-center">
-                  What makes a good lead
-                </a>
+                <Link href="/radar?tour=1" className="text-sm text-ink underline decoration-hairline underline-offset-4 hover:decoration-ink min-h-11 inline-flex items-center">
+                  Take the one-minute tour
+                </Link>
               </div>
             </div>
           </div>

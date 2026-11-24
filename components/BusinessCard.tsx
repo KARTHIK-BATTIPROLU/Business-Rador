@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { TransitionLink as Link } from '@/components/motion/ViewTransitions';
 import { Business, OutreachStatus } from '@/lib/types';
 import { MessageCircle, Phone, MoreHorizontal, MapPin, Instagram, Globe, FileText, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreDial } from '@/components/ui/Score';
 import { Popover, MenuItem } from '@/components/ui/Popover';
 import { buttonClass } from '@/components/ui/Button';
-import { instagramHref, isSample, knownFollowers, launchShort, launchLabel, leadReason, mapsHref, whatsappHref } from '@/lib/lead';
+import { vtTitle, instagramHref, isSample, knownFollowers, launchShort, launchLabel, leadReason, mapsHref, whatsappHref } from '@/lib/lead';
 
 interface BusinessCardProps {
   business: Business;
@@ -18,14 +18,23 @@ interface BusinessCardProps {
   onStatusChange: (status: OutreachStatus, notes?: string) => void;
   /** Static rendering for the landing page: no menu, no status select. */
   preview?: boolean;
+  /** Highlighted because its pin is hovered on the map. */
+  isHovered?: boolean;
+  onHover?: (hovering: boolean) => void;
 }
 
 /**
  * Lead card. One primary action (WhatsApp, or Call when there is no WhatsApp),
  * everything else in the menu. Status changes inline.
  */
-export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelected, onSelect, onStatusChange, preview }) => {
+export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelected, onSelect, onStatusChange, preview, isHovered, onHover }) => {
   const wa = whatsappHref(b);
+  const titleRef = React.useRef<HTMLHeadingElement>(null);
+  // Name the title only on the way out, so the list doesn't register hundreds of
+  // shared elements. When the lead is selected the drawer title already carries it.
+  const tagTitleForMorph = () => {
+    if (!isSelected && titleRef.current) titleRef.current.style.viewTransitionName = vtTitle(b.id);
+  };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
@@ -38,18 +47,24 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelec
         }
       }}
       tabIndex={onSelect ? 0 : undefined}
+      onMouseEnter={onHover ? () => onHover(true) : undefined}
+      onMouseLeave={onHover ? () => onHover(false) : undefined}
+      onFocus={onHover ? (e) => e.target === e.currentTarget && onHover(true) : undefined}
+      onBlur={onHover ? (e) => e.target === e.currentTarget && onHover(false) : undefined}
       aria-current={isSelected ? 'true' : undefined}
       aria-label={`${b.name}, ${b.area}, score ${b.lead_score}`}
       className={cn(
         'group relative rounded-panel border bg-surface p-4 text-left transition-[box-shadow,border-color,transform] duration-200 ease-out',
         onSelect && 'cursor-pointer',
-        isSelected ? 'border-ink shadow-hard nudge' : 'border-hairline hover:border-tan',
+        isSelected ? 'border-ink shadow-hard nudge' : isHovered ? 'border-accent ring-2 ring-accent/30' : 'border-hairline hover:border-tan',
         b.outreach_status === 'skip' && !isSelected && 'opacity-70',
       )}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg leading-tight truncate">{b.name}</h3>
+          <h3 ref={titleRef} className="text-lg leading-tight truncate">
+            {b.name}
+          </h3>
           <p className="mt-1 text-xs text-walnut flex flex-wrap items-center gap-x-1.5">
             <span className="text-ink font-medium">{b.area}</span>
             <span aria-hidden>·</span>
@@ -136,7 +151,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelec
               </MenuItem>
             )}
             <div className="my-1 border-t border-hairline" />
-            <Link role="menuitem" href={`/business/${b.id}`} className="flex w-full items-center gap-2.5 h-10 px-2.5 rounded-ctl text-sm text-ink hover:bg-sunk focus:bg-sunk outline-none">
+            <Link role="menuitem" href={`/business/${b.id}`} onClick={tagTitleForMorph} className="flex w-full items-center gap-2.5 h-10 px-2.5 rounded-ctl text-sm text-ink hover:bg-sunk focus:bg-sunk outline-none">
               <FileText aria-hidden className="size-4 stroke-[1.5] text-walnut" /> Full dossier and pitch kit
             </Link>
           </Popover>

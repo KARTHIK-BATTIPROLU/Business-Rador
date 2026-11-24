@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export type Theme = 'light' | 'dark';
 
 /** Reads the theme set by the inline script in layout.tsx (stored choice, else system). */
-export function useTheme(): [Theme | null, (t: Theme) => void] {
+export function useTheme(): [Theme | null, (t: Theme, origin?: { x: number; y: number }) => void] {
   const [theme, setThemeState] = useState<Theme | null>(null);
   useEffect(() => {
     const el = document.documentElement;
@@ -17,14 +17,36 @@ export function useTheme(): [Theme | null, (t: Theme) => void] {
     mo.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
     return () => mo.disconnect();
   }, []);
-  const setTheme = (t: Theme) => {
+  const setTheme = (t: Theme, origin?: { x: number; y: number }) => {
     const el = document.documentElement;
-    el.classList.add('theme-switching');
-    el.dataset.theme = t;
-    try {
-      localStorage.setItem('theme', t);
-    } catch {}
-    window.setTimeout(() => el.classList.remove('theme-switching'), 250);
+    const apply = () => {
+      el.dataset.theme = t;
+      try {
+        localStorage.setItem('theme', t);
+      } catch {}
+    };
+    type VT = { ready: Promise<void>; finished: Promise<void> };
+    const start = (document as Document & { startViewTransition?: (cb: () => void) => VT }).startViewTransition;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!start || reduce || !origin) {
+      el.classList.add('theme-switching');
+      apply();
+      window.setTimeout(() => el.classList.remove('theme-switching'), 250);
+      return;
+    }
+    // Circular wipe of the new theme, growing from the toggle button.
+    el.classList.add('vt-theme');
+    const vt = start.call(document, apply);
+    const r = Math.hypot(Math.max(origin.x, innerWidth - origin.x), Math.max(origin.y, innerHeight - origin.y));
+    vt.ready
+      .then(() =>
+        el.animate(
+          { clipPath: [`circle(0px at ${origin.x}px ${origin.y}px)`, `circle(${r}px at ${origin.x}px ${origin.y}px)`] },
+          { duration: 460, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', pseudoElement: '::view-transition-new(root)' },
+        ),
+      )
+      .catch(() => {});
+    vt.finished.finally(() => el.classList.remove('vt-theme'));
   };
   return [theme, setTheme];
 }
@@ -36,7 +58,10 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(dark ? 'light' : 'dark')}
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setTheme(dark ? 'light' : 'dark', { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      }}
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={dark ? 'Light mode' : 'Dark mode'}
       className={cn(

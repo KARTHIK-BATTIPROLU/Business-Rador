@@ -6,7 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Business, DeepResearchResult, OutreachStatus } from '@/lib/types';
 import { findSampleLead } from '@/lib/sample-leads';
-import { isSample } from '@/lib/lead';
+import { isSample, STATUS_META } from '@/lib/lead';
+import { useToast } from '@/components/ui/Toast';
 import { enrichBusinessWithMedia } from '@/lib/media-helpers';
 
 function fromCache(id: string): Business | null {
@@ -103,8 +104,13 @@ export function useDossier(businessId: string | undefined) {
     });
   };
 
-  const setStatus = async (s: OutreachStatus) => {
+  const toast = useToast();
+  const setStatus = async (s: OutreachStatus, opts?: { silent?: boolean }) => {
     if (!business) return;
+    const prevStatus = business.outreach_status;
+    if (!opts?.silent && prevStatus !== s) {
+      toast({ text: `Marked ${STATUS_META[s].label.toLowerCase()}`, action: { label: 'Undo', run: () => setStatus(prevStatus, { silent: true }) } });
+    }
     setBusiness((prev) => (prev ? { ...prev, outreach_status: s } : prev));
     try {
       await post(s, notes);
@@ -118,6 +124,7 @@ export function useDossier(businessId: string | undefined) {
     setIsSavingNotes(true);
     try {
       await post(business.outreach_status, notes);
+      toast({ text: 'Notes saved' });
       setNotesSaved(true);
       setTimeout(() => setNotesSaved(false), 2500);
     } catch (err) {

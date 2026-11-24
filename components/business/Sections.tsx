@@ -9,9 +9,10 @@ import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreStamp } from '@/components/ui/Score';
 import { buttonClass } from '@/components/ui/Button';
 import { BlurFade } from '@/components/motion/BlurFade';
-import { instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, whatsappHref } from '@/lib/lead';
+import { vtTitle, instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, whatsappHref } from '@/lib/lead';
 import { callScript, emailPitch, whatsappPitch } from './pitch';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/Toast';
 
 export function SectionHead({ id, title, note }: { id: string; title: string; note?: string }) {
   return (
@@ -33,7 +34,7 @@ export function Overview({ b, enriched }: { b: Business; enriched?: boolean }) {
           {b.category}
           {b.sub_category ? ` · ${b.sub_category}` : ''} · {b.area}, {b.city}
         </p>
-        <h1 id="overview" className="mt-2 text-4xl sm:text-5xl max-w-[18ch] scroll-mt-28">
+        <h1 id="overview" className="mt-2 text-4xl sm:text-5xl max-w-[18ch] scroll-mt-28" style={{ viewTransitionName: vtTitle(b.id) }}>
           {b.name}
         </h1>
         <p className="mt-5 text-lg leading-snug max-w-prose">{leadReason(b)}.</p>
@@ -166,9 +167,14 @@ export function Photos({ b }: { b: Business }) {
             role="tab"
             aria-selected={tab === k}
             onClick={() => setTab(k)}
-            className={cn('h-10 px-3 rounded-[4px] text-sm', tab === k ? 'bg-ink text-surface' : 'text-walnut hover:text-ink')}
+            className={cn('relative h-10 px-3 rounded-[4px] text-sm transition-colors duration-200', tab === k ? 'text-surface' : 'text-walnut hover:text-ink')}
           >
-            {l} <span className="font-mono text-xs tabular">{n}</span>
+            {tab === k && (
+              <motion.span layoutId="photo-tab" aria-hidden className="absolute inset-0 rounded-[4px] bg-ink" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />
+            )}
+            <span className="relative">
+              {l} <span className="font-mono text-xs tabular">{n}</span>
+            </span>
           </button>
         ))}
       </div>
@@ -184,7 +190,13 @@ export function Photos({ b }: { b: Business }) {
           </div>
         </div>
       ) : (
-        <ul className="columns-2 md:columns-3 gap-3 [column-fill:_balance]">
+        <motion.ul
+          key={tab}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.22 }}
+          className="columns-2 md:columns-3 gap-3 [column-fill:_balance]"
+        >
           {shown.map((p, i) => (
             <li key={p.id} className="mb-3 break-inside-avoid">
               <BlurFade delay={Math.min(i, 6) * 0.04}>
@@ -200,7 +212,7 @@ export function Photos({ b }: { b: Business }) {
               </BlurFade>
             </li>
           ))}
-        </ul>
+        </motion.ul>
       )}
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
@@ -291,11 +303,13 @@ export function PitchKit({ b }: { b: Business }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [b.id, researchedAt]);
 
+  const toast = useToast();
   const copy = async (key: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      toast({ text: 'Copied to clipboard' });
     } catch {
-      /* clipboard can be blocked; the text is still selectable */
+      toast({ text: "Couldn't copy. Select the text and copy it yourself." });
     }
     setCopied(key);
     setTimeout(() => setCopied(null), 1800);
@@ -341,15 +355,33 @@ export function PitchKit({ b }: { b: Business }) {
               aria-selected={tab === k}
               aria-controls="pitch-panel"
               onClick={() => setTab(k)}
-              className={cn('h-11 px-3 rounded-ctl text-left text-sm border whitespace-nowrap', tab === k ? 'border-ink bg-surface text-ink' : 'border-transparent text-walnut hover:text-ink')}
+              className={cn('relative h-11 px-3 rounded-ctl text-left text-sm whitespace-nowrap transition-colors duration-200', tab === k ? 'text-ink' : 'text-walnut hover:text-ink')}
             >
-              {l}
-              {preferred && ((preferred === 'phone' && k === 'call') || preferred === k) && <span className="ml-1.5 text-2xs text-accent-strong">best</span>}
+              {tab === k && (
+                <motion.span
+                  layoutId="pitch-tab"
+                  aria-hidden
+                  className="absolute inset-0 rounded-ctl border border-ink bg-surface"
+                  transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+                />
+              )}
+              <span className="relative">
+                {l}
+                {preferred && ((preferred === 'phone' && k === 'call') || preferred === k) && <span className="ml-1.5 text-2xs text-accent-strong">best</span>}
+              </span>
             </button>
           ))}
         </div>
 
-        <div id="pitch-panel" role="tabpanel" className="rounded-panel border border-hairline bg-surface p-5 sm:p-6 space-y-3">
+        <motion.div
+          key={tab}
+          id="pitch-panel"
+          role="tabpanel"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-panel border border-hairline bg-surface p-5 sm:p-6 space-y-3"
+        >
           {tab === 'whatsapp' && (
             <>
               <label htmlFor="pk-wa" className="sr-only">WhatsApp message</label>
@@ -433,7 +465,7 @@ export function PitchKit({ b }: { b: Business }) {
             </>
           )}
           <span role="status" className="sr-only">{copied ? 'Copied to clipboard' : ''}</span>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

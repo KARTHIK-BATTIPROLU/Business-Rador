@@ -49,7 +49,7 @@ export function BottomSheet({
       className="fixed inset-x-0 bottom-0 z-30 flex flex-col rounded-t-panel border-t border-x border-ink bg-surface md:hidden"
       initial={false}
       animate={{ height: heightFor(snap) }}
-      transition={reduce ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 34, mass: 0.9 }}
     >
       <button
         type="button"

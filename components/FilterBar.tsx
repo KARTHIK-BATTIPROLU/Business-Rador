@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RadarFilterState } from '@/lib/types';
 import { GLOBAL_MARKETS, geocodeUniversalArea } from '@/lib/geocoding';
+import { AnimatePresence, motion } from 'motion/react';
 import { Crosshair, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Popover } from '@/components/ui/Popover';
 import { FieldLabel, Select } from '@/components/ui/primitives';
@@ -184,9 +185,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
         align="end"
         panelClassName="w-[min(92vw,560px)] p-4 sm:p-5"
         trigger={({ props, open }) => (
-          <button {...props} className={buttonClass(open ? 'ink' : 'outline', 'md')}>
+          <button {...props} data-tour="filters" className={buttonClass(open ? 'ink' : 'outline', 'md')}>
             <SlidersHorizontal aria-hidden /> Filters
-            {chips.length > 0 && <span className="font-mono tabular text-xs">({chips.length})</span>}
+            <AnimatePresence initial={false} mode="popLayout">
+              {chips.length > 0 && (
+                <motion.span
+                  key={chips.length}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.16 }}
+                  className="font-mono tabular text-xs"
+                >
+                  ({chips.length})
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         )}
       >
@@ -366,10 +380,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
         )}
       </Popover>
 
-      {chips.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
+      <ul className="contents" aria-label="Active filters">
+        <AnimatePresence initial={false}>
           {chips.map((c) => (
-            <li key={c.key}>
+            <motion.li
+              key={c.key}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            >
               <button
                 type="button"
                 onClick={() => onChange(c.clear)}
@@ -379,10 +400,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
                 {c.label}
                 <X aria-hidden className="size-3.5 stroke-[1.5] text-walnut" />
               </button>
-            </li>
+            </motion.li>
           ))}
-        </ul>
-      )}
+        </AnimatePresence>
+      </ul>
     </div>
   );
 };

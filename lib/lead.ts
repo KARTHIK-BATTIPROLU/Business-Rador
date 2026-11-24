@@ -128,3 +128,6 @@ export function siteBudget(b: Business): string {
 export const knownFollowers = (b: Business) => (b.instagram_followers != null && b.instagram_followers > 0 ? b.instagram_followers : null);
 
 export const isSample = (b: Pick<Business, 'id'>) => b.id.startsWith('sample-');
+
+/** view-transition-name for a lead's title, shared by card, drawer and lead page. */
+export const vtTitle = (id: string) => `lead-${id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;

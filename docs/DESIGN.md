@@ -7,6 +7,12 @@
 5. **Depth.** 1px hairline borders, no soft shadows. One hard shadow (`shadow-hard` = 4px 4px 0 ink) reserved for the primary button and the selected lead card.
 6. **Texture.** SVG paper grain at 3% on the page background only. The one hand-made mark on the landing page is a saffron highlighter swipe behind a phrase. No glass, glow, gradient text or blobs.
 7. **Icons.** lucide only, stroke 1.5, inline with text, never inside coloured tiles, never animated.
-8. **Motion.** 150–400ms ease-out, one moving thing per region, all gated by `prefers-reduced-motion`. Only the map sweep may loop.
+8. **Motion.** 150–400ms ease-out or a damped spring, one moving thing per region, all gated by `prefers-reduced-motion` (`MotionConfig reducedMotion="user"` + CSS). Page changes use the View Transitions API (cross-fade; lead title morphs card → lead page; theme switch wipes in a circle from the toggle). Sliding indicators for tabs and the section menu, chips and toasts spring in and out. Loops only while something is actually happening: map sweep, scan ripples during a scan, hover pulse while hovered.
 9. **Components.** Button (primary/ink/ghost) · Badge (status, flag) · Card · Input · Popover · Drawer · Score (dial + rotated stamp) · Skeleton. Build pages from these, not ad-hoc classes.
 10. **Do / don't.** Do: uneven grids, real Hyderabad names and numbers, label sample data "sample", show the map. Don't: italic accent word, all-caps eyebrows over headings, numbered 01/02/03 sections, three equal cards in a row, emoji as UI, pulsing icons, "powerful/seamless/unlock".
+
+## Interaction kit
+- **Command bar** (`Ctrl/Cmd K`, any page): leads, places from `GLOBAL_MARKETS`, page actions, "Scan <typed place>".
+- **Toasts** (`useToast`): one optional action, usually Undo for status and note changes.
+- **City clock**: local time at the map centre (exact for preset cities, longitude estimate elsewhere).
+- **Tour** (`components/tour/Tour.tsx`): offered on first visit to /radar, replay from the ? button, `/radar?tour=1`, or the command bar.
