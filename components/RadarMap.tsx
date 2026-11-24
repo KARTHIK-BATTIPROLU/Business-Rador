@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Business } from '@/lib/types';
-import { LocateFixed } from 'lucide-react';
+import { Crosshair, LocateFixed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RadarMapProps {
@@ -12,6 +12,9 @@ interface RadarMapProps {
   selectedBusiness?: Business | null;
   onSelectBusiness: (b: Business) => void;
   flyToCoords?: { lat: number; lng: number; zoom?: number } | null;
+  /** Scan whatever the map is showing: centre + a radius derived from zoom. */
+  onScanViewport?: (coords: { lat: number; lng: number; radius: number }) => void;
+  isScanning?: boolean;
   className?: string;
 }
 
@@ -149,7 +152,7 @@ const toGeoJSON = (items: Business[]): GeoJSON.FeatureCollection<GeoJSON.Point> 
 
 const escapeHTML = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness, onSelectBusiness, flyToCoords, className }) => {
+export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness, onSelectBusiness, flyToCoords, onScanViewport, isScanning, className }) => {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const dataRef = useRef<Business[]>(businesses);
@@ -343,6 +346,27 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
           style={{ background: 'conic-gradient(from 0deg, rgb(var(--ink) / 0.07), transparent 14%, transparent)' }}
         />
       </div>
+
+      {/* Scan the visible area */}
+      {onScanViewport && (
+        <button
+          type="button"
+          disabled={isScanning}
+          onClick={() => {
+            const map = mapRef.current;
+            if (!map || isScanning) return;
+            const c = map.getCenter();
+            // Same radius rule as before the redesign: wider when zoomed out, 0.9–5 km.
+            const radius = Math.min(5000, Math.max(900, Math.round(40000000 / Math.pow(2, map.getZoom() + 1))));
+            onScanViewport({ lat: c.lat, lng: c.lng, radius });
+          }}
+          className="absolute top-14 md:top-3 left-1/2 z-10 center-x inline-flex items-center gap-1.5 h-10 px-3.5 rounded-ctl border border-ink bg-surface text-sm text-ink shadow-hard-sm disabled:opacity-70 disabled:cursor-wait transition-[transform] duration-150"
+          title="Look for newly opened shops in the area the map is showing"
+        >
+          <Crosshair aria-hidden className="size-4 stroke-[1.5]" />
+          {isScanning ? 'Scanning this area…' : 'Scan this area'}
+        </button>
+      )}
 
       {/* Basemap switch */}
       <div role="group" aria-label="Basemap" className="absolute top-3 left-3 z-10 flex rounded-ctl border border-hairline bg-surface p-0.5 text-xs">

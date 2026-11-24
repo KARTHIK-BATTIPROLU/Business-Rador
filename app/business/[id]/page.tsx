@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Mail, MessageCircle, Phone, RefreshCw, MapPin } from 'lucide-react';
 import { useDossier } from '@/components/business/useDossier';
 import { Notes, Overview, Photos, PitchKit, Presence } from '@/components/business/Sections';
+import { DeepResearch } from '@/components/business/DeepResearch';
 import { whatsappPitch, emailPitch } from '@/components/business/pitch';
 import { Skeleton, StatusSelect, Wordmark } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -15,6 +16,7 @@ import { isSample, mapsHref, whatsappHref } from '@/lib/lead';
 const NAV = [
   ['overview', 'Overview'],
   ['presence', 'Presence'],
+  ['research', 'Research'],
   ['photos', 'Photos'],
   ['pitch', 'Pitch kit'],
   ['notes', 'Notes'],
@@ -107,6 +109,7 @@ export default function BusinessDetailsPage() {
       <main className="mx-auto max-w-5xl px-5 sm:px-8 pt-10 sm:pt-14 space-y-20 sm:space-y-24">
         <Overview b={b} enriched={b.is_enriched} />
         <Presence b={b} />
+        <DeepResearch b={b} onResult={d.applyResearch} />
         <Photos b={b} />
         <PitchKit b={b} />
         <Notes b={b} notes={d.notes} setNotes={d.setNotes} onSave={d.saveNotes} saving={d.isSavingNotes} saved={d.notesSaved} onStatus={d.setStatus} />

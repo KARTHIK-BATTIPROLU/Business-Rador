@@ -4,7 +4,7 @@
 // single-file page: API first, then this browser's cached scan, then (new) the
 // sample set for `sample-*` ids. Live enrichment runs once if the lead isn't enriched.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Business, OutreachStatus } from '@/lib/types';
+import type { Business, DeepResearchResult, OutreachStatus } from '@/lib/types';
 import { findSampleLead } from '@/lib/sample-leads';
 import { isSample } from '@/lib/lead';
 import { enrichBusinessWithMedia } from '@/lib/media-helpers';
@@ -127,5 +127,21 @@ export function useDossier(businessId: string | undefined) {
     }
   };
 
-  return { business, isLoading, error, notes, setNotes, isSavingNotes, notesSaved, saveNotes, setStatus, isEnriching, enrichMeta, triggerLiveEnrichment };
+  // Store research on the lead (and in this browser's scan cache, like before).
+  const applyResearch = (r: DeepResearchResult) => {
+    setBusiness((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, deep_research: r };
+      try {
+        const cached = localStorage.getItem('radar_cached_businesses');
+        if (cached) {
+          const list: Business[] = JSON.parse(cached);
+          localStorage.setItem('radar_cached_businesses', JSON.stringify(list.map((x) => (x.id === next.id ? next : x))));
+        }
+      } catch {}
+      return next;
+    });
+  };
+
+  return { business, applyResearch, isLoading, error, notes, setNotes, isSavingNotes, notesSaved, saveNotes, setStatus, isEnriching, enrichMeta, triggerLiveEnrichment };
 }

@@ -9,7 +9,7 @@ import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreDial } from '@/components/ui/Score';
 import { Popover, MenuItem } from '@/components/ui/Popover';
 import { buttonClass } from '@/components/ui/Button';
-import { instagramHref, isSample, launchShort, launchLabel, leadReason, mapsHref, whatsappHref } from '@/lib/lead';
+import { instagramHref, isSample, knownFollowers, launchShort, launchLabel, leadReason, mapsHref, whatsappHref } from '@/lib/lead';
 
 interface BusinessCardProps {
   business: Business;
@@ -81,9 +81,11 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelec
             <Globe aria-hidden /> Has site
           </Badge>
         )}
-        {b.instagram_followers != null && (
-          <span className="font-mono tabular text-walnut">{Intl.NumberFormat('en-IN').format(b.instagram_followers)} IG</span>
-        )}
+        {knownFollowers(b) != null ? (
+          <span className="font-mono tabular text-walnut">{Intl.NumberFormat('en-IN').format(knownFollowers(b)!)} IG</span>
+        ) : b.instagram_handle ? (
+          <span className="font-mono text-walnut truncate max-w-[9rem]">@{b.instagram_handle.replace('@', '')}</span>
+        ) : null}
       </dl>
 
       {!preview && (
@@ -126,7 +128,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business: b, isSelec
               <MapPin aria-hidden /> Google Maps
             </MenuItem>
             <MenuItem href={instagramHref(b)} external>
-              <Instagram aria-hidden /> {b.instagram_handle ? `@${b.instagram_handle.replace('@', '')}` : 'Look for Instagram'}
+              <Instagram aria-hidden /> {b.instagram_handle ? `@${b.instagram_handle.replace('@', '')}` : 'Find on Instagram'}
             </MenuItem>
             {b.website && (
               <MenuItem href={b.website} external>

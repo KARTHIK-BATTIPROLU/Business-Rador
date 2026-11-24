@@ -6,7 +6,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
 
   const filters: RadarFilterState = {
-    region: (searchParams.get('region') as RadarFilterState['region']) || 'all',
+    region: searchParams.get('region') || 'all',
+    country: searchParams.get('country') || undefined,
+    city: searchParams.get('city') || undefined,
     us_state: searchParams.get('us_state') || 'all',
     area: searchParams.get('area') || 'all',
     category: searchParams.get('category') || 'all',

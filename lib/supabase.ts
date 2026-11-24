@@ -57,27 +57,30 @@ export async function fetchFilteredBusinesses(filters: RadarFilterState): Promis
   // Fallback to local memory store
   let res = localBusinesses.map((b) => enrichBusinessWithMedia(b));
 
-  // Region / Country filter (Hyderabad, Texas USA, London UK)
+  // Global Region / Country filter
   if (filters.region && filters.region !== 'all') {
-    if (filters.region === 'hyderabad') {
-      res = res.filter((b) => b.city?.toLowerCase() === 'hyderabad' || b.country?.toLowerCase() === 'india' || !b.country);
-    } else if (filters.region === 'texas') {
-      res = res.filter((b) => b.state?.toLowerCase() === 'texas' || ['austin', 'dallas', 'houston', 'san antonio', 'fort worth'].includes(b.city?.toLowerCase()));
-    } else if (filters.region === 'london') {
-      res = res.filter((b) => b.city?.toLowerCase() === 'london' || b.country?.toLowerCase() === 'uk');
+    const reg = filters.region.toLowerCase();
+    if (reg === 'hyderabad' || reg === 'india') {
+      res = res.filter((b) => b.city?.toLowerCase() === 'hyderabad' || b.country?.toLowerCase().includes('india') || !b.country);
+    } else if (reg === 'texas' || reg === 'usa') {
+      res = res.filter((b) => b.state?.toLowerCase() === 'texas' || b.country?.toLowerCase().includes('usa') || b.country?.toLowerCase().includes('united states') || ['austin', 'dallas', 'houston', 'san antonio', 'fort worth'].includes(b.city?.toLowerCase()));
+    } else if (reg === 'london' || reg === 'uk') {
+      res = res.filter((b) => b.city?.toLowerCase() === 'london' || b.country?.toLowerCase().includes('uk') || b.country?.toLowerCase().includes('united kingdom'));
+    } else {
+      res = res.filter((b) => (b.country && b.country.toLowerCase().includes(reg)) || (b.city && b.city.toLowerCase().includes(reg)));
     }
   }
 
-  // Country filter
+  // Explicit Country filter
   if (filters.country && filters.country !== 'all') {
     const c = filters.country.toLowerCase();
-    if (c === 'usa') {
-      res = res.filter((b) => b.country?.toLowerCase() === 'usa' || b.state?.toLowerCase() === 'texas');
-    } else if (c === 'uk') {
-      res = res.filter((b) => b.country?.toLowerCase() === 'uk' || b.city?.toLowerCase() === 'london');
-    } else if (c === 'india') {
-      res = res.filter((b) => b.country?.toLowerCase() === 'india' || b.city?.toLowerCase() === 'hyderabad');
-    }
+    res = res.filter((b) => (b.country && b.country.toLowerCase().includes(c)) || (c === 'usa' && b.state?.toLowerCase() === 'texas'));
+  }
+
+  // Explicit City filter
+  if (filters.city && filters.city !== 'all') {
+    const cityLower = filters.city.toLowerCase();
+    res = res.filter((b) => b.city && b.city.toLowerCase().includes(cityLower));
   }
 
   // US State filter

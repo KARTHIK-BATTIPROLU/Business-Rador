@@ -1,6 +1,6 @@
 import { Business, BusinessCategory, MediaPhoto, BusinessDossier } from './types';
 
-export function getInstagramSearchUrl(businessName: string, area?: string, handle?: string | null): string {
+export function getInstagramSearchUrl(businessName: string, area?: string, handle?: string | null, city?: string): string {
   // If the handle is an explicit external verified URL, return it
   if (handle?.startsWith('http')) return handle;
   // If handle exists without http, return direct verified profile URL
@@ -9,16 +9,18 @@ export function getInstagramSearchUrl(businessName: string, area?: string, handl
   }
   // Universal search via Google index to reliably find authentic Instagram accounts and mentions
   const cleanName = businessName.replace(/[^\w\s]/gi, '').trim();
-  const query = `site:instagram.com "${cleanName}" ${area || ''}`.trim();
+  const query = `site:instagram.com "${cleanName}" ${city || area || ''}`.trim();
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
 export function getGoogleMapsUrl(name: string, area?: string, city?: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (area || '') + ' ' + (city || ''))}`;
+  const query = [name, area, city].filter(Boolean).join(' ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-export function getExactCoordinatesMapUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps?q=${lat},${lng}`;
+export function getExactCoordinatesMapUrl(lat: number, lng: number, name?: string): string {
+  const query = name ? `${name} ${lat},${lng}` : `${lat},${lng}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 // Curated high-resolution photo galleries representing real Hyderabad business corridors

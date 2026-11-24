@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RadarFilterState } from '@/lib/types';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { GLOBAL_MARKETS, geocodeUniversalArea } from '@/lib/geocoding';
+import { Crosshair, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Popover } from '@/components/ui/Popover';
 import { FieldLabel, Select } from '@/components/ui/primitives';
 import { buttonClass } from '@/components/ui/Button';
@@ -12,33 +13,31 @@ import { cn } from '@/lib/utils';
 interface FilterBarProps {
   filters: RadarFilterState;
   onChange: (updated: Partial<RadarFilterState>) => void;
-  onAreaJump?: (area: string) => void;
+  onAreaJump?: (area: string, coords?: [number, number]) => void;
+  /** Scan a place the user typed (geocoded first). */
+  onTriggerScan?: (
+    region?: string,
+    area?: string,
+    coords?: { lat: number; lng: number; radius?: number; city?: string; country?: string },
+  ) => void;
+  isScanning?: boolean;
   className?: string;
 }
 
-const US_STATES = [
-  'Texas', 'California', 'New York', 'Florida', 'Illinois', 'Washington', 'Georgia', 'Colorado', 'North Carolina',
-  'Massachusetts', 'Arizona', 'Pennsylvania', 'Ohio', 'Michigan', 'New Jersey', 'Virginia', 'Tennessee', 'Indiana',
-  'Missouri', 'Maryland', 'Wisconsin', 'Minnesota', 'South Carolina', 'Alabama', 'Louisiana', 'Kentucky', 'Oregon',
-  'Oklahoma', 'Connecticut', 'Utah', 'Nevada', 'Arkansas', 'Mississippi', 'Kansas', 'New Mexico', 'Nebraska', 'Idaho',
-  'Hawaii', 'Maine', 'Montana', 'Rhode Island', 'Delaware', 'South Dakota', 'North Dakota', 'Alaska', 'Vermont', 'Wyoming',
+// Corridors shown as quick picks when no market is chosen.
+const TRENDING: { name: string; coords?: [number, number] }[] = [
+  { name: 'Kokapet' },
+  { name: 'Indiranagar' },
+  { name: 'South Congress' },
+  { name: 'SoHo' },
+  { name: 'Shoreditch' },
+  { name: 'Shibuya' },
+  { name: 'Mitte' },
 ];
 
-export const REGION_AREAS: Record<string, string[]> = {
-  hyderabad: ['Kokapet', 'Gachibowli', 'HITECH City', 'Madhapur', 'Financial District', 'Nanakramguda', 'Jubilee Hills', 'Banjara Hills', 'Kondapur', 'Narsingi'],
-  texas: ['South Congress', 'East Austin', 'Austin', 'Uptown', 'Deep Ellum', 'Dallas', 'Montrose', 'The Heights', 'Houston'],
-  london: ['Shoreditch', 'Soho', 'Covent Garden', 'London'],
-  all: ['Kokapet', 'Financial District', 'Gachibowli', 'Jubilee Hills', 'South Congress', 'East Austin', 'Uptown', 'Deep Ellum', 'Montrose', 'Shoreditch', 'Soho'],
-};
+const marketLabel = (id: string) => GLOBAL_MARKETS[id]?.name ?? id;
 
-const REGIONS: { value: RadarFilterState['region']; label: string }[] = [
-  { value: 'all', label: 'All markets' },
-  { value: 'hyderabad', label: 'Hyderabad (₹35k–₹75k sites)' },
-  { value: 'texas', label: 'United States, Texas permits' },
-  { value: 'london', label: 'London (£2k–£4.5k sites)' },
-];
-
-const CATEGORIES = ['Food & Beverage', 'Clothing & Fashion', 'Beauty & Wellness', 'Fitness', 'Retail', 'Health', 'Services'];
+const CATEGORIES = ['Food & Beverage', 'Clothing & Fashion', 'Beauty & Wellness', 'Fitness', 'Retail', 'Health', 'Services', 'Tech'];
 
 const LAUNCH: Record<string, string> = {
   opening_soon: 'Opening soon',
@@ -54,8 +53,9 @@ type Chip = { key: string; label: string; clear: Partial<RadarFilterState> };
 
 function activeChips(f: RadarFilterState): Chip[] {
   const c: Chip[] = [];
-  if (f.region !== 'all') c.push({ key: 'region', label: REGIONS.find((r) => r.value === f.region)?.label.split(' (')[0] ?? f.region, clear: { region: 'all', area: 'all' } });
-  if (f.us_state && f.us_state !== 'all') c.push({ key: 'us', label: f.us_state, clear: { us_state: 'all' } });
+  if (f.region && f.region !== 'all') c.push({ key: 'region', label: marketLabel(f.region), clear: { region: 'all', country: undefined, city: undefined, area: 'all' } });
+  else if (f.country) c.push({ key: 'country', label: f.country, clear: { country: undefined, city: undefined, area: 'all' } });
+  if (f.city) c.push({ key: 'city', label: f.city, clear: { city: undefined, area: 'all' } });
   if (f.area !== 'all') c.push({ key: 'area', label: f.area, clear: { area: 'all' } });
   if (f.category !== 'all') c.push({ key: 'cat', label: f.category, clear: { category: 'all' } });
   if (f.has_website === 'no' || f.missing_website_only) c.push({ key: 'web', label: 'No website', clear: { has_website: 'all', missing_website_only: false } });
@@ -69,7 +69,7 @@ function activeChips(f: RadarFilterState): Chip[] {
 }
 
 export const RESET_FILTERS: Partial<RadarFilterState> = {
-  region: 'all', us_state: 'all', area: 'all', category: 'all', recency: 'all', launch_age: 'all',
+  region: 'all', country: undefined, city: undefined, us_state: 'all', area: 'all', category: 'all', recency: 'all', launch_age: 'all',
   has_website: 'all', missing_website_only: false, instagram_filter: 'all', low_social_only: false, status: 'all',
 };
 
@@ -110,17 +110,71 @@ export function SearchBox({ value, onChange, className }: { value: string; onCha
 }
 
 /** "Filters" button + popover, and a row of removable chips for whatever is active. */
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJump, className }) => {
-  const region = filters.region || 'all';
-  const areas = REGION_AREAS[region] || REGION_AREAS.all;
+export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJump, onTriggerScan, isScanning, className }) => {
+  const marketId = filters.region || 'all';
+  const market = GLOBAL_MARKETS[marketId];
+  const cities = market ? market.cities : [];
+  const city = cities.find((c) => c.name === filters.city);
+  const corridors = city ? city.corridors : market ? market.cities.flatMap((c) => c.corridors) : [];
+  const quickPicks: { name: string; coords?: [number, number] }[] = market
+    ? city
+      ? city.corridors
+      : market.cities.flatMap((c) => c.corridors.slice(0, 2)).slice(0, 8)
+    : TRENDING;
   const chips = activeChips(filters);
 
-  const setRegion = (r: RadarFilterState['region']) => {
-    onChange({ region: r, area: 'all' });
-    if (!onAreaJump) return;
-    if (r === 'texas') onAreaJump('Austin');
-    else if (r === 'london') onAreaJump('London');
-    else if (r === 'hyderabad') onAreaJump('Hyderabad');
+  const [place, setPlace] = useState('');
+  const [placeState, setPlaceState] = useState<'idle' | 'locating' | 'notfound'>('idle');
+
+  const setMarket = (id: string) => {
+    if (id === 'all') {
+      onChange({ region: 'all', country: undefined, city: undefined, area: 'all' });
+      return;
+    }
+    const m = GLOBAL_MARKETS[id];
+    if (!m) return;
+    const firstCity = m.cities[0];
+    onChange({ region: id, country: m.name, city: firstCity?.name, area: 'all' });
+    onAreaJump?.(firstCity?.name || m.name, firstCity?.coords || m.defaultCoords);
+  };
+
+  const setCity = (name: string) => {
+    if (name === 'all') {
+      onChange({ city: undefined, area: 'all' });
+      if (market) onAreaJump?.(market.name, market.defaultCoords);
+      return;
+    }
+    const c = cities.find((x) => x.name === name);
+    if (!c) return;
+    onChange({ city: name, area: 'all' });
+    onAreaJump?.(c.name, c.coords);
+  };
+
+  const setArea = (name: string, coords?: [number, number]) => {
+    if (name === 'all' || filters.area === name) {
+      onChange({ area: 'all' });
+      return;
+    }
+    const corr = corridors.find((x) => x.name === name);
+    onChange({ area: name });
+    onAreaJump?.(name, coords || corr?.coords);
+  };
+
+  const scanPlace = async (e: React.FormEvent, close: () => void) => {
+    e.preventDefault();
+    const q = place.trim();
+    if (!q) return;
+    setPlaceState('locating');
+    const geo = await geocodeUniversalArea(q);
+    if (!geo) {
+      setPlaceState('notfound');
+      return;
+    }
+    setPlaceState('idle');
+    onChange({ area: geo.name, city: geo.city, country: geo.country });
+    onAreaJump?.(geo.name, [geo.lng, geo.lat]);
+    onTriggerScan?.(undefined, geo.name, { lat: geo.lat, lng: geo.lng, radius: geo.radius, city: geo.city, country: geo.country });
+    close();
   };
 
   return (
@@ -140,29 +194,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
           <div className="space-y-5">
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <FieldLabel htmlFor="f-region">Market</FieldLabel>
-                <Select id="f-region" value={region} onChange={(e) => setRegion(e.target.value as RadarFilterState['region'])}>
-                  {REGIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
+                <FieldLabel htmlFor="f-region">Country</FieldLabel>
+                <Select id="f-region" value={marketId} onChange={(e) => setMarket(e.target.value)}>
+                  <option value="all">All countries</option>
+                  {Object.values(GLOBAL_MARKETS).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.currencySymbol})
                     </option>
                   ))}
                 </Select>
               </div>
-              {(region === 'texas' || region === 'all') && (
+              {cities.length > 0 && (
                 <div>
-                  <FieldLabel htmlFor="f-us">US state</FieldLabel>
-                  <Select
-                    id="f-us"
-                    value={filters.us_state || 'all'}
-                    onChange={(e) => {
-                      onChange({ us_state: e.target.value });
-                      if (e.target.value === 'Texas') onAreaJump?.('Austin');
-                    }}
-                  >
-                    <option value="all">Any state</option>
-                    {US_STATES.map((s) => (
-                      <option key={s}>{s}</option>
+                  <FieldLabel htmlFor="f-city">City</FieldLabel>
+                  <Select id="f-city" value={filters.city || 'all'} onChange={(e) => setCity(e.target.value)}>
+                    <option value="all">All cities</option>
+                    {cities.map((c) => (
+                      <option key={c.name}>{c.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+              {corridors.length > 0 && (
+                <div>
+                  <FieldLabel htmlFor="f-area">Neighbourhood</FieldLabel>
+                  <Select id="f-area" value={corridors.some((c) => c.name === filters.area) ? filters.area : 'all'} onChange={(e) => setArea(e.target.value)}>
+                    <option value="all">All neighbourhoods</option>
+                    {corridors.map((c) => (
+                      <option key={`${c.name}-${c.coords.join()}`}>{c.name}</option>
                     ))}
                   </Select>
                 </div>
@@ -245,30 +304,55 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onChange, onAreaJ
             </div>
 
             <fieldset>
-              <legend className="text-xs font-medium text-walnut mb-2">Area (moves the map)</legend>
+              <legend className="text-xs font-medium text-walnut mb-2">
+                {city ? `Neighbourhoods in ${city.name}` : market ? `Busy streets in ${market.name}` : 'Busy streets worldwide'} (moves the map)
+              </legend>
               <div className="flex flex-wrap gap-1.5">
-                {areas.map((a) => {
-                  const on = filters.area === a;
+                {quickPicks.map((a) => {
+                  const on = filters.area === a.name;
                   return (
                     <button
-                      key={a}
+                      key={a.name}
                       type="button"
                       aria-pressed={on}
-                      onClick={() => {
-                        onChange({ area: on ? 'all' : a });
-                        if (!on) onAreaJump?.(a);
-                      }}
+                      onClick={() => setArea(a.name, a.coords)}
                       className={cn(
                         'h-9 px-3 rounded-ctl border text-sm transition-colors',
                         on ? 'bg-ink text-surface border-ink' : 'border-hairline text-ink hover:border-ink bg-surface',
                       )}
                     >
-                      {a}
+                      {a.name}
                     </button>
                   );
                 })}
               </div>
             </fieldset>
+
+            {onTriggerScan && (
+              <form onSubmit={(e) => scanPlace(e, close)} className="rounded-ctl border border-hairline bg-paper p-3">
+                <label htmlFor="f-place" className="block text-xs font-medium text-walnut mb-1.5">
+                  Scan anywhere: type a neighbourhood or city
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="f-place"
+                    value={place}
+                    onChange={(e) => {
+                      setPlace(e.target.value);
+                      if (placeState === 'notfound') setPlaceState('idle');
+                    }}
+                    placeholder="Bandra West, Shibuya, Williamsburg…"
+                    className="h-11 min-w-0 flex-1 rounded-ctl border border-hairline bg-surface px-3 text-sm text-ink placeholder:text-walnut/70 outline-none focus:border-ink"
+                  />
+                  <button type="submit" disabled={!place.trim() || placeState === 'locating' || isScanning} className={buttonClass('ink', 'md', 'shrink-0')}>
+                    <Crosshair aria-hidden /> {placeState === 'locating' ? 'Finding…' : 'Scan'}
+                  </button>
+                </div>
+                <p role="status" className="mt-1.5 text-xs text-walnut min-h-[1rem]">
+                  {placeState === 'notfound' ? `Couldn't find "${place}". Try adding the city, like "Bandra Mumbai".` : ''}
+                </p>
+              </form>
+            )}
 
             <div className="flex items-center justify-between pt-1 border-t border-hairline -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4">
               <button type="button" onClick={() => onChange(RESET_FILTERS)} className="text-sm text-walnut underline underline-offset-4 hover:text-ink min-h-11">

@@ -98,6 +98,8 @@
   .nudge { transform: translate(-1px, -1px); }
   .press { transform: translate(2px, 2px); }
   .center-y { transform: translateY(-50%); }
+  .center-x { transform: translateX(-50%); }
+  .center-x:hover:not(:disabled) { transform: translate(calc(-50% - 1px), -1px); }
 }
 
 @layer components {

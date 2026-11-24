@@ -146,8 +146,9 @@ export default function LandingPage() {
             <div className="lg:sticky lg:top-10 self-start">
               <h2 className="text-3xl sm:text-4xl">Where it looks</h2>
               <p className="mt-5 text-walnut max-w-prose">
-                West Hyderabad, where the new buildings are. The scanner also reads Texas permit filings (Austin, Dallas,
-                Houston) and London high streets, but Hyderabad is home.
+                West Hyderabad, where the new buildings are. The scanner works elsewhere too: type a neighbourhood
+                anywhere, from Bandra to Shibuya to South Congress, and it looks there. Texas leads also come from state
+                permit filings. Hyderabad is home.
               </p>
             </div>
             <ul className="divide-y divide-hairline border-y border-hairline">
@@ -176,7 +177,7 @@ export default function LandingPage() {
             <Wordmark compact />
             <p className="max-w-prose">
               About the data: places come from OpenStreetMap (Overpass), Google Places and, for Texas, the Comptroller&apos;s open
-              sales-tax permits. A scheduled job scans every 8 hours. Leads and outreach notes are stored in Supabase. Pitch
+              sales-tax permits. Typed place names are located with the Photon geocoder. A scheduled job scans every 8 hours. Leads and outreach notes are stored in Supabase. Pitch
               text is drafted by an AI model and should be read before sending.
             </p>
           </div>

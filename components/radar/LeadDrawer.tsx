@@ -7,7 +7,7 @@ import { Business, OutreachStatus } from '@/lib/types';
 import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreDial } from '@/components/ui/Score';
 import { buttonClass } from '@/components/ui/Button';
-import { instagramHref, isSample, launchLabel, leadReason, mapsHref, siteBudget, spottedAgo, whatsappHref } from '@/lib/lead';
+import { instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, spottedAgo, whatsappHref } from '@/lib/lead';
 import { cn } from '@/lib/utils';
 
 /** Lead detail shown beside the map (desktop drawer) or inside the bottom sheet (mobile). */
@@ -35,7 +35,7 @@ export function LeadDetail({
     ['Open for', launchLabel(b)],
     ['Spotted', spottedAgo(b.first_seen_at)],
     ['Website', b.website ? <a href={b.website} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">has one</a> : <span className="text-accent-strong">none found</span>],
-    ['Instagram', b.instagram_followers != null ? `${Intl.NumberFormat('en-IN').format(b.instagram_followers)} followers${b.instagram_post_count != null ? `, ${b.instagram_post_count} posts` : ''}` : b.instagram_handle ? `@${b.instagram_handle}` : 'not found'],
+    ['Instagram', knownFollowers(b) != null ? `${Intl.NumberFormat('en-IN').format(knownFollowers(b)!)} followers${b.instagram_post_count != null ? `, ${b.instagram_post_count} posts` : ''}` : b.instagram_handle ? `@${b.instagram_handle.replace('@', '')}` : 'not found'],
     ['Site budget', siteBudget(b)],
   ];
 

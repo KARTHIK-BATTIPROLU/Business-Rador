@@ -32,18 +32,33 @@ const RadarMap = dynamic(() => import('@/components/RadarMap').then((m) => m.Rad
 
 type ScanState = { phase: 'idle' } | { phase: 'running'; step: number; where: string; steps: string[] } | { phase: 'done' | 'notice' | 'error'; text: string };
 
-function scanSteps(region: string, area: string): { where: string; steps: string[] } {
-  if (region === 'texas') {
-    return { where: 'Texas', steps: ['Reading new sales-tax permits from the Texas Comptroller', 'Placing permit addresses on the map', 'Scoring what came back'] };
+type ScanTarget = { lat: number; lng: number; radius?: number; city?: string; country?: string };
+
+// Progress text that matches what /api/scan actually does for each kind of request.
+function scanSteps(region: string, area: string, city?: string, coords?: boolean): { where: string; steps: string[] } {
+  const isUS = region === 'usa' || /austin|dallas|houston|texas/i.test(`${area} ${city ?? ''}`);
+  if (region === 'all' && area === 'all' && !coords) {
+    return {
+      where: 'eight cities',
+      steps: [
+        'Reading new Texas sales-tax permits',
+        'Sweeping Shoreditch, Kokapet, Indiranagar and SoHo',
+        'Sweeping Shibuya, Surry Hills and Mitte',
+        'Looking for opening dates',
+        'Scoring what came back',
+      ],
+    };
   }
-  if (region === 'london' || ['Shoreditch', 'Soho', 'Covent Garden'].includes(area)) {
-    const where = area !== 'all' ? area : 'Shoreditch and Soho';
-    return { where, steps: [`Asking OpenStreetMap about shops in ${where}`, 'Cross-checking Google Places', 'Scoring what came back'] };
-  }
-  const where = area !== 'all' ? area : region === 'all' ? 'every market' : 'west Hyderabad';
+  const where = coords && area === 'Map view' ? 'this part of the map' : area !== 'all' ? area : city || (region !== 'all' ? region : 'this area');
   return {
     where,
-    steps: [`Asking OpenStreetMap about shopfronts in ${where}`, 'Cross-checking Google Places for phone numbers', 'Looking for opening dates', 'Scoring what came back'],
+    steps: [
+      coords ? `Locating ${where}` : `Finding ${where} on the map`,
+      `Asking OpenStreetMap about shopfronts in ${where}`,
+      ...(isUS ? ['Reading new Texas sales-tax permits'] : []),
+      'Looking for opening dates and Instagram handles',
+      'Scoring what came back',
+    ],
   };
 }
 
@@ -92,6 +107,8 @@ export default function RadarPage() {
     try {
       const params = new URLSearchParams();
       if (filters.region && filters.region !== 'all') params.set('region', filters.region);
+      if (filters.country) params.set('country', filters.country);
+      if (filters.city) params.set('city', filters.city);
       if (filters.us_state && filters.us_state !== 'all') params.set('us_state', filters.us_state);
       if (filters.area && filters.area !== 'all') params.set('area', filters.area);
       if (filters.category && filters.category !== 'all') params.set('category', filters.category);
@@ -117,7 +134,16 @@ export default function RadarPage() {
           const cached = localStorage.getItem('radar_cached_businesses');
           if (cached) {
             const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed)) cachedList = parsed;
+            // Drop synthetic demo rows that older builds cached.
+            if (Array.isArray(parsed))
+              cachedList = parsed.filter(
+                (b: Business) =>
+                  !b.id?.startsWith('mock-') &&
+                  !b.id?.startsWith('ldn-sh-') &&
+                  !b.id?.startsWith('tx-sc-') &&
+                  !b.name?.includes('BakeOasis') &&
+                  !b.name?.includes('Bouldin Creek Aperitivo'),
+              );
           }
         } catch {}
         setBusinesses(cachedList);
@@ -182,10 +208,10 @@ export default function RadarPage() {
     }
   };
 
-  const handleManualScan = async () => {
-    const targetRegion = filters.region || 'all';
-    const targetArea = filters.area !== 'all' ? filters.area : 'all';
-    const { where, steps } = scanSteps(targetRegion, targetArea);
+  const handleManualScan = async (overrideRegion?: string, overrideArea?: string, coords?: ScanTarget) => {
+    const targetRegion = overrideRegion || filters.region || 'all';
+    const targetArea = overrideArea !== undefined ? overrideArea : filters.area !== 'all' ? filters.area : 'all';
+    const { where, steps } = scanSteps(targetRegion, targetArea, coords?.city || filters.city, Boolean(coords));
     setScan({ phase: 'running', step: 0, where, steps });
     setSampleMode(false);
 
@@ -193,7 +219,14 @@ export default function RadarPage() {
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area: targetArea, region: targetRegion }),
+        body: JSON.stringify({
+          area: targetArea,
+          region: targetRegion,
+          city: coords?.city || filters.city,
+          country: coords?.country || filters.country,
+          category: filters.category !== 'all' ? filters.category : undefined,
+          ...(coords ? { lat: coords.lat, lng: coords.lng, ...(coords.radius ? { radius: coords.radius } : {}) } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -239,10 +272,12 @@ export default function RadarPage() {
     setLoadError(null);
   };
 
-  const handleAreaJump = (areaName: string) => {
-    const coords = AREA_COORDINATES[areaName];
-    if (coords) setFlyToCoords({ lng: coords[0], lat: coords[1], zoom: areaName === 'Hyderabad' ? 12.2 : 14.5 });
+  const handleAreaJump = (areaName: string, coords?: [number, number]) => {
+    const c = coords || AREA_COORDINATES[areaName];
+    if (c) setFlyToCoords({ lng: c[0], lat: c[1], zoom: areaName === 'Hyderabad' ? 12.2 : 14.5 });
   };
+
+  const handleScanViewport = (c: { lat: number; lng: number; radius: number }) => handleManualScan(filters.region, 'Map view', c);
 
   const select = (b: Business) => {
     setSelectedBusiness(b);
@@ -251,7 +286,14 @@ export default function RadarPage() {
 
   const updateFilters = (u: Partial<RadarFilterState>) => setFilters((prev) => ({ ...prev, ...u }));
 
-  const scanLabel = filters.area !== 'all' ? `Scan ${filters.area}` : filters.region === 'texas' ? 'Scan Texas permits' : filters.region === 'london' ? 'Scan London' : 'Scan for new shops';
+  const scanLabel =
+    filters.area !== 'all'
+      ? `Scan ${filters.area}`
+      : filters.city
+        ? `Scan ${filters.city}`
+        : filters.region && filters.region !== 'all'
+          ? `Scan ${filters.country || filters.region}`
+          : 'Scan all markets';
 
   const panel = (
     <BusinessPanel
@@ -263,7 +305,7 @@ export default function RadarPage() {
       }}
       onStatusChange={handleStatusChange}
       onRefresh={sampleMode ? undefined : loadBusinesses}
-      onTriggerScan={handleManualScan}
+      onTriggerScan={() => handleManualScan()}
       onPreviewSamples={sampleMode ? undefined : previewSamples}
       isScanning={isScanning}
       isLoading={isLoading && !sampleMode}
@@ -285,9 +327,16 @@ export default function RadarPage() {
           </Link>
           <div className="order-3 basis-full md:order-none md:basis-auto md:flex-1 flex flex-wrap items-center gap-2">
             <SearchBox value={filters.search} onChange={(v) => updateFilters({ search: v })} className="flex-1 min-w-[11rem] md:max-w-md" />
-            <FilterBar filters={filters} onChange={updateFilters} onAreaJump={handleAreaJump} className="contents" />
+            <FilterBar
+              filters={filters}
+              onChange={updateFilters}
+              onAreaJump={handleAreaJump}
+              onTriggerScan={(region, area, coords) => handleManualScan(region, area, coords)}
+              isScanning={isScanning}
+              className="contents"
+            />
           </div>
-          <Button onClick={handleManualScan} disabled={isScanning} variant="primary" size="md" className="ml-auto">
+          <Button onClick={() => handleManualScan()} disabled={isScanning} variant="primary" size="md" className="ml-auto">
             {isScanning ? 'Scanning…' : scanLabel}
           </Button>
           <ThemeToggle className="-ml-1" />
@@ -340,7 +389,14 @@ export default function RadarPage() {
 
         {/* Centre: map */}
         <div className="relative flex-1 min-w-0">
-          <RadarMap businesses={visible} selectedBusiness={selectedBusiness} onSelectBusiness={select} flyToCoords={flyToCoords} />
+          <RadarMap
+            businesses={visible}
+            selectedBusiness={selectedBusiness}
+            onSelectBusiness={select}
+            flyToCoords={flyToCoords}
+            onScanViewport={handleScanViewport}
+            isScanning={isScanning}
+          />
         </div>
 
         {/* Right: drawer (tablet and up). Pushes the map on desktop, overlays it on tablet. */}

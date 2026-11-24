@@ -23,6 +23,57 @@ export interface MediaPhoto {
   posted_at?: string;
 }
 
+export interface DeepResearchResult {
+  researched_at: string;
+  business_overview: string;
+  target_decision_maker: {
+    probable_role: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    preferred_channel: 'email' | 'instagram' | 'whatsapp' | 'phone';
+  };
+  google_presence: {
+    rating: number;
+    review_count: number;
+    sentiment_summary: string;
+    missing_elements: string[];
+  };
+  social_presence: {
+    instagram_handle?: string | null;
+    instagram_status: string;
+    engagement_rate?: string;
+    key_themes: string[];
+  };
+  corridor_competition: {
+    nearby_competitors: Array<{ name: string; distance: string; advantage: string }>;
+    vulnerability_gap: string;
+  };
+  outreach_pack: {
+    cold_email: {
+      subject_line: string;
+      preview_text: string;
+      body: string;
+      target_email: string;
+    };
+    instagram_dm: {
+      message: string;
+      follow_up_message: string;
+      direct_message_url: string;
+      instagram_handle: string;
+    };
+    whatsapp_message: {
+      text: string;
+      direct_wa_url: string;
+    };
+    phone_script: {
+      opener: string;
+      hook: string;
+      closing_ask: string;
+    };
+  };
+}
+
 export interface BusinessDossier {
   verified_address?: string;
   hours?: string;
@@ -77,6 +128,7 @@ export interface Business {
   outreach_notes?: string | null;
   contacted_at?: string | null;
   dossier?: BusinessDossier;
+  deep_research?: DeepResearchResult;
   is_enriched?: boolean;
   last_enriched_at?: string | null;
   instagram_verified?: boolean | null;
@@ -87,20 +139,24 @@ export interface Business {
 }
 
 export interface RadarFilterState {
-  region: 'all' | 'hyderabad' | 'texas' | 'london';
-  country?: 'all' | 'usa' | 'uk' | 'india';
+  region: string;
+  country?: string;
+  city?: string;
   us_state?: string;
   area: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
   category: string;
   recency: 'all' | '24h' | '7d' | '30d' | '6m';
   launch_age?: 'all' | 'opening_soon' | '14d' | '30d' | '90d' | 'older';
-  missing_website_only?: boolean; // Store Leads inspired: filter only businesses without a website
+  missing_website_only?: boolean; // Filter only businesses without a website
   has_website?: 'all' | 'yes' | 'no';
   low_social_only?: boolean; // Filter businesses with < 500 Instagram followers
   instagram_filter?: 'all' | 'low_followers' | 'no_instagram' | 'dormant_posts';
   search: string;
   status: 'all' | OutreachStatus;
-  source: 'all' | 'google_maps' | 'instagram' | 'osm' | 'texas_comptroller';
+  source: 'all' | 'google_maps' | 'instagram' | 'osm' | 'texas_comptroller' | string;
 }
 
 export interface AreaStat {

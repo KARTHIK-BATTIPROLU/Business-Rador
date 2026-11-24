@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Check, Copy, ExternalLink, Instagram, MapPin, MessageCircle, Search, X, Globe } from 'lucide-react';
+import { Check, Copy, ExternalLink, Instagram, Mail, MapPin, MessageCircle, Phone, Search, X, Globe } from 'lucide-react';
 import type { Business, MediaPhoto, OutreachStatus } from '@/lib/types';
 import { Badge, StatusSelect } from '@/components/ui/primitives';
 import { ScoreStamp } from '@/components/ui/Score';
 import { buttonClass } from '@/components/ui/Button';
 import { BlurFade } from '@/components/motion/BlurFade';
-import { instagramHref, isSample, launchLabel, leadReason, mapsHref, siteBudget, whatsappHref } from '@/lib/lead';
+import { instagramHref, isSample, knownFollowers, launchLabel, leadReason, mapsHref, siteBudget, whatsappHref } from '@/lib/lead';
 import { callScript, emailPitch, whatsappPitch } from './pitch';
 import { cn } from '@/lib/utils';
 
@@ -68,8 +68,8 @@ export function Presence({ b }: { b: Business }) {
     ['Source', b.source.replace(/_/g, ' ')],
   ];
   const ig: [string, React.ReactNode][] = [
-    ['Handle', b.instagram_handle && b.instagram_verified !== false ? <a className="underline underline-offset-2" href={instagramHref(b)} target="_blank" rel="noopener noreferrer">@{b.instagram_handle.replace('@', '')}</a> : 'None found'],
-    ['Followers', b.instagram_followers != null ? Intl.NumberFormat('en-IN').format(b.instagram_followers) : '—'],
+    ['Handle', b.instagram_handle ? <a className="underline underline-offset-2" href={instagramHref(b)} target="_blank" rel="noopener noreferrer">@{b.instagram_handle.replace('@', '')}</a> : 'None found'],
+    ['Followers', knownFollowers(b) != null ? Intl.NumberFormat('en-IN').format(knownFollowers(b)!) : 'Not measured'],
     ['Posts', b.instagram_post_count ?? '—'],
     ['First post', b.instagram_first_post_at ? new Date(b.instagram_first_post_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'],
   ];
@@ -245,33 +245,95 @@ export function Photos({ b }: { b: Business }) {
 }
 
 /* ——— Pitch kit ——— */
-export function PitchKit({ b }: { b: Business }) {
-  const [tab, setTab] = useState<'whatsapp' | 'call' | 'email'>('whatsapp');
-  const [copied, setCopied] = useState<string | null>(null);
-  const text = tab === 'whatsapp' ? whatsappPitch(b) : tab === 'call' ? callScript(b) : emailPitch(b);
-  const wa = whatsappHref(b, whatsappPitch(b));
+type Channel = 'whatsapp' | 'email' | 'instagram' | 'call';
 
-  const copy = async () => {
+function emailParts(b: Business) {
+  const pack = b.deep_research?.outreach_pack?.cold_email;
+  if (pack) return { to: pack.target_email || b.email || '', subject: pack.subject_line, body: pack.body };
+  const raw = emailPitch(b);
+  const m = raw.match(/^Subject:\s*(.*)\n+([\s\S]*)$/);
+  return { to: b.email || '', subject: m ? m[1] : `A website for ${b.name}?`, body: m ? m[2] : raw };
+}
+
+const igHandleOf = (b: Business) => (b.deep_research?.outreach_pack?.instagram_dm?.instagram_handle || b.instagram_handle || '').replace('@', '').trim();
+
+/**
+ * Editable drafts for every channel with one-tap send. Seeded from deep research
+ * when it has run, otherwise from the dossier / default scripts.
+ */
+export function PitchKit({ b }: { b: Business }) {
+  const preferred = b.deep_research?.target_decision_maker?.preferred_channel;
+  const [tab, setTab] = useState<Channel>(preferred === 'email' ? 'email' : preferred === 'instagram' ? 'instagram' : 'whatsapp');
+  const [copied, setCopied] = useState<string | null>(null);
+  const [wa, setWa] = useState('');
+  const [mail, setMail] = useState({ to: '', subject: '', body: '' });
+  const [dm, setDm] = useState({ handle: '', message: '', followUp: '' });
+  const [call, setCall] = useState('');
+
+  // Re-seed whenever the lead or its research changes.
+  const researchedAt = b.deep_research?.researched_at;
+  React.useEffect(() => {
+    const pack = b.deep_research?.outreach_pack;
+    setWa(pack?.whatsapp_message?.text || whatsappPitch(b));
+    setMail(emailParts(b));
+    const handle = igHandleOf(b);
+    setDm({
+      handle,
+      message:
+        pack?.instagram_dm?.message ||
+        `Hi${handle ? ` @${handle}` : ''}! Saw your new place in ${b.area}. Are you taking bookings through DMs for now, or is a booking link coming soon?`,
+      followUp:
+        pack?.instagram_dm?.follow_up_message ||
+        `Just bumping this in case it got buried. We sketched a one-page site for ${b.name}. Happy to send the link if you want a look.`,
+    });
+    const ps = pack?.phone_script;
+    setCall(ps ? `${ps.opener}\n\n${ps.hook}\n\nAsk: ${ps.closing_ask}` : callScript(b));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [b.id, researchedAt]);
+
+  const copy = async (key: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
       /* clipboard can be blocked; the text is still selectable */
     }
-    setCopied(tab);
+    setCopied(key);
     setTimeout(() => setCopied(null), 1800);
   };
 
-  const tabs: [typeof tab, string][] = [
+  const waHref = whatsappHref(b, wa);
+  const igOpen = dm.handle
+    ? `https://ig.me/m/${dm.handle}`
+    : `https://www.google.com/search?q=${encodeURIComponent(`site:instagram.com "${b.name}" ${b.city || b.area || ''}`)}`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(mail.to)}&su=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`;
+  const mailto = `mailto:${mail.to}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`;
+
+  const tabs: [Channel, string][] = [
     ['whatsapp', 'WhatsApp'],
-    ['call', 'Call script'],
     ['email', 'Email'],
+    ['instagram', 'Instagram DM'],
+    ['call', 'Call script'],
   ];
+
+  const field = 'w-full rounded-ctl border border-hairline bg-paper px-3 text-sm text-ink outline-none focus:border-ink';
+  const area = cn(field, 'py-3 text-[15px] leading-[1.6] resize-y');
+  const CopyBtn = ({ k, text, label = 'Copy' }: { k: string; text: string; label?: string }) => (
+    <button type="button" onClick={() => copy(k, text)} className={buttonClass('outline', 'sm')}>
+      {copied === k ? <Check aria-hidden /> : <Copy aria-hidden />}
+      {copied === k ? 'Copied' : label}
+    </button>
+  );
+  const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
   return (
     <section aria-labelledby="pitch">
-      <SectionHead id="pitch" title="Pitch kit" note="Drafted for this shop. Read it once before you send it." />
+      <SectionHead
+        id="pitch"
+        title="Pitch kit"
+        note={b.deep_research ? 'Drafted from the research above. Edit before you send.' : 'Edit before you send. Run research above for sharper drafts.'}
+      />
       <div className="grid lg:grid-cols-[12rem_minmax(0,1fr)] gap-6">
-        <div role="tablist" aria-label="Script" className="flex lg:flex-col gap-1">
+        <div role="tablist" aria-label="Channel" className="flex lg:flex-col gap-1 overflow-x-auto">
           {tabs.map(([k, l]) => (
             <button
               key={k}
@@ -279,34 +341,98 @@ export function PitchKit({ b }: { b: Business }) {
               aria-selected={tab === k}
               aria-controls="pitch-panel"
               onClick={() => setTab(k)}
-              className={cn('h-11 px-3 rounded-ctl text-left text-sm border', tab === k ? 'border-ink bg-surface text-ink' : 'border-transparent text-walnut hover:text-ink')}
+              className={cn('h-11 px-3 rounded-ctl text-left text-sm border whitespace-nowrap', tab === k ? 'border-ink bg-surface text-ink' : 'border-transparent text-walnut hover:text-ink')}
             >
               {l}
+              {preferred && ((preferred === 'phone' && k === 'call') || preferred === k) && <span className="ml-1.5 text-2xs text-accent-strong">best</span>}
             </button>
           ))}
         </div>
-        <div id="pitch-panel" role="tabpanel" className="rounded-panel border border-hairline bg-surface">
-          <pre className="whitespace-pre-wrap font-sans text-[15px] leading-[1.6] text-ink p-5 sm:p-6 max-w-prose">{text}</pre>
-          <div className="flex flex-wrap items-center gap-2 border-t border-hairline px-5 sm:px-6 py-3">
-            <button type="button" onClick={copy} className={buttonClass('outline', 'sm')}>
-              {copied === tab ? <Check aria-hidden /> : <Copy aria-hidden />}
-              {copied === tab ? 'Copied' : 'Copy'}
-            </button>
-            <span role="status" className="sr-only">
-              {copied === tab ? 'Copied to clipboard' : ''}
-            </span>
-            {tab === 'whatsapp' && wa && (
-              <a href={wa} target="_blank" rel="noopener noreferrer" className={buttonClass('ink', 'sm')}>
-                <MessageCircle aria-hidden /> Open in WhatsApp
-              </a>
-            )}
-            {tab === 'email' && b.email && (
-              <a href={`mailto:${b.email}?body=${encodeURIComponent(text)}`} className={buttonClass('ink', 'sm')}>
-                Open in mail
-              </a>
-            )}
-            <span className="ml-auto font-mono text-2xs text-walnut">{text.split(/\s+/).length} words</span>
-          </div>
+
+        <div id="pitch-panel" role="tabpanel" className="rounded-panel border border-hairline bg-surface p-5 sm:p-6 space-y-3">
+          {tab === 'whatsapp' && (
+            <>
+              <label htmlFor="pk-wa" className="sr-only">WhatsApp message</label>
+              <textarea id="pk-wa" rows={5} value={wa} onChange={(e) => setWa(e.target.value)} className={area} />
+              <div className="flex flex-wrap items-center gap-2">
+                <CopyBtn k="wa" text={wa} />
+                {waHref ? (
+                  <a href={waHref} target="_blank" rel="noopener noreferrer" className={buttonClass('ink', 'sm')}>
+                    <MessageCircle aria-hidden /> Open in WhatsApp
+                  </a>
+                ) : (
+                  <span className="text-xs text-walnut">No WhatsApp number on file.</span>
+                )}
+                <span className="ml-auto font-mono text-2xs text-walnut">{words(wa)} words</span>
+              </div>
+            </>
+          )}
+
+          {tab === 'email' && (
+            <>
+              <div className="grid sm:grid-cols-[5rem_1fr] gap-x-3 gap-y-2 items-center">
+                <label htmlFor="pk-to" className="text-sm text-walnut">To</label>
+                <input id="pk-to" value={mail.to} onChange={(e) => setMail({ ...mail, to: e.target.value })} placeholder="owner@example.com" className={cn(field, 'h-10 font-mono text-[13px]')} />
+                <label htmlFor="pk-su" className="text-sm text-walnut">Subject</label>
+                <input id="pk-su" value={mail.subject} onChange={(e) => setMail({ ...mail, subject: e.target.value })} className={cn(field, 'h-10')} />
+              </div>
+              {!b.email && mail.to && <p className="text-xs text-walnut">That address is a guess from the shop name. Check it before sending.</p>}
+              <label htmlFor="pk-body" className="sr-only">Email body</label>
+              <textarea id="pk-body" rows={12} value={mail.body} onChange={(e) => setMail({ ...mail, body: e.target.value })} className={area} />
+              <div className="flex flex-wrap items-center gap-2">
+                <CopyBtn k="mail" text={`Subject: ${mail.subject}\n\n${mail.body}`} />
+                <a href={gmail} target="_blank" rel="noopener noreferrer" className={buttonClass('ink', 'sm')}>
+                  <Mail aria-hidden /> Open in Gmail
+                </a>
+                <a href={mailto} className={buttonClass('outline', 'sm')}>
+                  Open in mail app
+                </a>
+                <span className="ml-auto font-mono text-2xs text-walnut">{words(mail.body)} words</span>
+              </div>
+            </>
+          )}
+
+          {tab === 'instagram' && (
+            <>
+              <div className="grid sm:grid-cols-[5rem_1fr] gap-x-3 gap-y-2 items-center">
+                <label htmlFor="pk-ig" className="text-sm text-walnut">Handle</label>
+                <input id="pk-ig" value={dm.handle} onChange={(e) => setDm({ ...dm, handle: e.target.value.replace('@', '') })} placeholder="not found yet" className={cn(field, 'h-10 font-mono text-[13px]')} />
+              </div>
+              <label htmlFor="pk-dm" className="block text-sm text-walnut">First message</label>
+              <textarea id="pk-dm" rows={4} value={dm.message} onChange={(e) => setDm({ ...dm, message: e.target.value })} className={area} />
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={igOpen}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => copy('dm', dm.message)}
+                  className={buttonClass('ink', 'sm')}
+                >
+                  <Instagram aria-hidden /> {copied === 'dm' ? 'Copied, opening…' : dm.handle ? 'Copy and open DM' : 'Copy and find on Instagram'}
+                </a>
+                <CopyBtn k="dm2" text={dm.message} />
+              </div>
+              <label htmlFor="pk-fu" className="block text-sm text-walnut pt-2">Follow-up, if they don&apos;t answer in two days</label>
+              <textarea id="pk-fu" rows={3} value={dm.followUp} onChange={(e) => setDm({ ...dm, followUp: e.target.value })} className={area} />
+              <CopyBtn k="fu" text={dm.followUp} label="Copy follow-up" />
+            </>
+          )}
+
+          {tab === 'call' && (
+            <>
+              <label htmlFor="pk-call" className="sr-only">Call script</label>
+              <textarea id="pk-call" rows={9} value={call} onChange={(e) => setCall(e.target.value)} className={area} />
+              <div className="flex flex-wrap items-center gap-2">
+                <CopyBtn k="call" text={call} />
+                {b.phone && (
+                  <a href={`tel:${b.phone}`} className={buttonClass('ink', 'sm')}>
+                    <Phone aria-hidden /> Call {b.phone}
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+          <span role="status" className="sr-only">{copied ? 'Copied to clipboard' : ''}</span>
         </div>
       </div>
     </section>

@@ -75,7 +75,7 @@ export function leadReason(b: Business): string {
   else if (d !== null && d >= 0 && d <= 45) bits.push(`opened ${d === 0 ? 'today' : `${d} days ago`}`);
   if (b.instagram_post_count != null && b.instagram_post_count <= 12) {
     bits.push(`${b.instagram_post_count} Instagram ${b.instagram_post_count === 1 ? 'post' : 'posts'}`);
-  } else if (b.instagram_followers != null && b.instagram_followers < 500) {
+  } else if (b.instagram_followers != null && b.instagram_followers > 0 && b.instagram_followers < 500) {
     bits.push(`${b.instagram_followers} followers`);
   } else if (!b.instagram_handle) {
     bits.push('no Instagram found');
@@ -106,11 +106,25 @@ export function instagramHref(b: Business): string {
   )}`;
 }
 
+// Typical first-site budget by currency (same ranges the scanner uses).
+const BUDGETS: Record<string, string> = {
+  INR: '₹35,000 – ₹75,000',
+  USD: '$2,800 – $5,200',
+  GBP: '£2,200 – £4,000',
+  CAD: 'C$3,200 – C$5,800',
+  AUD: 'A$3,500 – A$6,200',
+  EUR: '€2,500 – €4,800',
+  JPY: '¥380,000 – ¥750,000',
+  AED: 'AED 9,500 – AED 18,000',
+  SGD: 'S$3,800 – S$6,800',
+};
+
 export function siteBudget(b: Business): string {
   if (b.estimated_site_budget) return b.estimated_site_budget;
-  if (b.currency === 'USD') return '$2,800 – $4,500';
-  if (b.currency === 'GBP') return '£2,000 – £3,500';
-  return '₹35,000 – ₹75,000';
+  return BUDGETS[b.currency || 'INR'] || BUDGETS.INR;
 }
+
+/** Follower count only when the scanner actually measured one (0 means unknown). */
+export const knownFollowers = (b: Business) => (b.instagram_followers != null && b.instagram_followers > 0 ? b.instagram_followers : null);
 
 export const isSample = (b: Pick<Business, 'id'>) => b.id.startsWith('sample-');
