@@ -8,7 +8,7 @@ import { motion, useReducedMotion } from 'motion/react';
 export function HandUnderline({ children }: { children: React.ReactNode }) {
   const reduce = useReducedMotion();
   return (
-    <span className="relative inline-block isolate">
+    <span className="relative inline-block isolate text-on-accent">
       <motion.span
         aria-hidden
         className="absolute -z-10 left-[-0.12em] right-[-0.12em] top-[0.18em] bottom-[0.02em] bg-accent-fill/80 rounded-[3px] origin-left"
