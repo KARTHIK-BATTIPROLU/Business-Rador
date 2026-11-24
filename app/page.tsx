@@ -9,17 +9,16 @@ import { HandUnderline } from '@/components/landing/HandUnderline';
 import { WordReveal } from '@/components/motion/WordReveal';
 import { BlurFade } from '@/components/motion/BlurFade';
 import { ExampleLead } from '@/components/landing/ExampleLead';
+import { WorldMap, CITY_COUNT, MARKET_COUNT } from '@/components/landing/WorldMap';
+import { GLOBAL_MARKETS } from '@/lib/geocoding';
 
-const COVERAGE: { name: string; note: string; coords: string }[] = [
-  { name: 'Kokapet', note: 'New towers, empty ground floors filling up with cafes before the residents arrive.', coords: '17.41 N, 78.33 E' },
-  { name: 'Gachibowli', note: 'Lunch crowd from the IT parks. Salons and quick food open here every month.', coords: '17.44 N, 78.35 E' },
-  { name: 'Financial District', note: 'Office-tower retail and juice bars.', coords: '17.42 N, 78.34 E' },
-  { name: 'Jubilee Hills', note: 'Road 36 and the lanes off it: designer boutiques, clinics, the occasional bakery with a queue.', coords: '17.43 N, 78.41 E' },
-  { name: 'HITECH City and Madhapur', note: 'Dense, fast, takeaway-heavy.', coords: '17.45 N, 78.39 E' },
-  { name: 'Kondapur and Narsingi', note: 'Gyms and studios in new mixed-use blocks.', coords: '17.46 N, 78.36 E' },
-  { name: 'Nanakramguda', note: 'Small and quiet. Worth a scan every week.', coords: '17.42 N, 78.36 E' },
-  { name: 'Banjara Hills', note: 'Older money, newer clinics.', coords: '17.42 N, 78.44 E' },
-];
+// A line per market. Kept short and factual: which cities have presets and what
+// a first site usually costs there (the scanner's own budget ranges).
+const MARKET_NOTES: Record<string, string> = {
+  india: 'Where Business Radar was built, and the corridors it has watched longest.',
+  usa: 'In Texas, leads also come from state sales-tax permit filings, often before the shop opens.',
+};
+const MARKET_ORDER = ['india', 'usa', 'uk', 'japan', 'uae', 'australia', 'canada', 'germany', 'france', 'singapore'];
 
 export default function LandingPage() {
   return (
@@ -29,11 +28,11 @@ export default function LandingPage() {
       </a>
 
       <header className="border-b border-hairline">
-        <div className="mx-auto max-w-[1240px] h-16 px-5 sm:px-8 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-[1240px] h-16 px-4 sm:px-8 flex items-center justify-between gap-3">
           <Link href="/" aria-label="Business Radar home">
             <Wordmark />
           </Link>
-          <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
+          <nav aria-label="Main" className="flex items-center gap-0.5 sm:gap-2">
             <a href="#how" className="hidden md:inline-flex h-11 items-center px-3 text-sm text-walnut hover:text-ink">
               How it finds leads
             </a>
@@ -49,33 +48,58 @@ export default function LandingPage() {
       </header>
 
       <main id="main" className="flex-1">
-        {/* Hero: copy left on a narrow column, the map crop takes the rest and bleeds right */}
-        <section className="mx-auto max-w-[1240px] px-5 sm:px-8 pt-12 sm:pt-16 lg:pt-20 pb-20 lg:pb-28 grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-14 items-start">
-          <div className="lg:pt-6 max-w-[34rem]">
-            <h1 className="text-[2.5rem] leading-[1.04] sm:text-5xl lg:text-[3.5rem]">
-              <WordReveal text="Find Hyderabad's new shops" />{' '}
+        {/* Hero: headline and copy over a full-width world map, with the street-level crop pinned on top */}
+        <section className="mx-auto max-w-[1240px] px-5 sm:px-8 pt-12 sm:pt-16 lg:pt-20 pb-20 lg:pb-28">
+          <div className="grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-8 lg:gap-16 items-end">
+            <h1 className="text-[2.6rem] leading-[1.02] sm:text-5xl lg:text-[4.1rem]">
+              <WordReveal text="Find the world's newest shops" />{' '}
               <HandUnderline>
-                <WordReveal text="before anyone" start={4} />
+                <WordReveal text="before anyone" start={5} />
               </HandUnderline>{' '}
-              <WordReveal text="builds their website." start={6} />
+              <WordReveal text="builds their website." start={7} />
             </h1>
-            <p className="mt-7 text-lg text-walnut max-w-prose leading-[1.55]">
-              A cafe in Kokapet opened 11 days ago. It has three Instagram posts, a WhatsApp number on Google Maps, and no
-              site. Business Radar finds shops like that every eight hours and puts them on one map for your agency.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">
-              <Button href="/radar" variant="primary" size="lg">
-                Open the map <ArrowRight aria-hidden />
-              </Button>
-              <a href="#how" className="text-sm text-ink underline decoration-hairline underline-offset-4 hover:decoration-ink min-h-11 inline-flex items-center">
-                What makes a good lead
-              </a>
+            <div className="lg:pb-2">
+              <p className="text-lg text-walnut max-w-prose leading-[1.55]">
+                Somewhere today a cafe in Shoreditch, a barber in Williamsburg and a ramen bar in Shibuya opened with an
+                Instagram account and no website. Business Radar finds shops like that, scores them, and puts them on one map
+                for your agency.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                <Button href="/radar" variant="primary" size="lg">
+                  Open the map <ArrowRight aria-hidden />
+                </Button>
+                <a href="#how" className="text-sm text-ink underline decoration-hairline underline-offset-4 hover:decoration-ink min-h-11 inline-flex items-center">
+                  What makes a good lead
+                </a>
+              </div>
             </div>
-            <p className="mt-10 text-sm text-walnut">Built for small web and marketing studios in Hyderabad.</p>
           </div>
 
-          <div className="lg:-mr-10 xl:-mr-16 lg:mt-2">
-            <HeroMap />
+          <div className="relative mt-12 lg:mt-16">
+            <div className="rounded-panel border border-hairline bg-surface px-3 pt-6 pb-4 sm:px-6 lg:pr-[38%]">
+              <WorldMap className="block w-full h-auto" />
+              <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 px-1 text-sm text-walnut">
+                <div className="flex items-baseline gap-2">
+                  <dt className="sr-only">Countries</dt>
+                  <dd className="font-mono tabular text-ink text-lg">{MARKET_COUNT}</dd>
+                  <span>countries</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <dt className="sr-only">Preset cities</dt>
+                  <dd className="font-mono tabular text-ink text-lg">{CITY_COUNT}</dd>
+                  <span>cities with presets</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <dt className="sr-only">Anywhere else</dt>
+                  <dd className="text-ink">Anywhere else</dd>
+                  <span>by typing its name</span>
+                </div>
+              </dl>
+            </div>
+            {/* Street-level crop: one neighbourhood up close */}
+            <div className="mt-10 mx-auto max-w-[560px] lg:mt-0 lg:absolute lg:right-6 lg:-top-10 lg:w-[38%] lg:max-w-none">
+              <HeroMap />
+            </div>
           </div>
         </section>
 
@@ -84,6 +108,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-[1240px] px-5 sm:px-8 py-20 lg:py-28 grid lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] gap-12 lg:gap-20">
             <div>
               <h2 className="text-3xl sm:text-4xl max-w-[16ch]">How one cafe ends up on your list</h2>
+              <p className="mt-3 text-sm text-walnut">The example is a sample shop in Kokapet, Hyderabad. It works the same in Austin or Osaka.</p>
               <p className="mt-5 text-walnut max-w-prose">
                 The radar doesn&apos;t guess. Every lead comes with the facts behind it, so you can decide in a few seconds
                 whether to send a message.
@@ -95,12 +120,13 @@ export default function LandingPage() {
 
             <ol className="space-y-12 lg:pt-3">
               <BlurFade as="li" className="grid sm:grid-cols-[9rem_1fr] gap-2 sm:gap-8">
-                <p className="font-mono text-xs text-walnut pt-1.5">Every 8 hours</p>
+                <p className="font-mono text-xs text-walnut pt-1.5">On demand</p>
                 <div>
                   <h3 className="text-xl">It reads the map.</h3>
                   <p className="mt-2 text-walnut max-w-prose">
-                    A scheduled scan queries OpenStreetMap and Google Places across the western corridors, from Narsingi up to
-                    Kondapur, and keeps anything with a shopfront that wasn&apos;t there last time.
+                    Pick a neighbourhood anywhere, or drag the map and press &ldquo;Scan this area&rdquo;. The scan asks
+                    OpenStreetMap and Google Places what&apos;s there and keeps anything with a shopfront that wasn&apos;t there
+                    last time.
                   </p>
                 </div>
               </BlurFade>
@@ -130,9 +156,9 @@ export default function LandingPage() {
                 <div>
                   <h3 className="text-xl">Then it gets out of the way.</h3>
                   <p className="mt-2 text-walnut max-w-prose">
-                    One tap opens WhatsApp with a short hello already written. The dossier has a call script, an email and a
-                    budget range (₹35,000 to ₹75,000 for a Hyderabad shop site), and you mark the lead contacted when you&apos;re
-                    done.
+                    One tap opens WhatsApp, Gmail or an Instagram DM with a short hello already written. The dossier has a call
+                    script and a budget range in local money (₹35,000 to ₹75,000 in Hyderabad, $2,800 to $5,500 in the US,
+                    £2,200 to £4,200 in the UK), and you mark the lead contacted when you&apos;re done.
                   </p>
                 </div>
               </BlurFade>
@@ -146,24 +172,32 @@ export default function LandingPage() {
             <div className="lg:sticky lg:top-10 self-start">
               <h2 className="text-3xl sm:text-4xl">Where it looks</h2>
               <p className="mt-5 text-walnut max-w-prose">
-                West Hyderabad, where the new buildings are. The scanner works elsewhere too: type a neighbourhood
-                anywhere, from Bandra to Shibuya to South Congress, and it looks there. Texas leads also come from state
-                permit filings. Hyderabad is home.
+                {MARKET_COUNT} countries have ready-made city and neighbourhood presets. Anywhere else, type the place, like
+                &ldquo;Bandra West&rdquo; or &ldquo;Kreuzberg&rdquo;, and the radar finds it and scans it.
               </p>
             </div>
             <ul className="divide-y divide-hairline border-y border-hairline">
-              {COVERAGE.map((c, i) => (
-                <li key={c.name} className={`py-6 grid sm:grid-cols-[minmax(0,14rem)_1fr_auto] gap-x-8 gap-y-1 items-baseline ${i === 0 ? 'sm:py-8' : ''}`}>
-                  <span className={`font-display tracking-display ${i === 0 ? 'text-3xl' : 'text-2xl'}`}>{c.name}</span>
-                  <span className="text-walnut max-w-prose">{c.note}</span>
-                  <span className="font-mono text-2xs text-walnut sm:text-right whitespace-nowrap">{c.coords}</span>
-                </li>
-              ))}
+              {MARKET_ORDER.map((id, i) => {
+                const m = GLOBAL_MARKETS[id];
+                if (!m) return null;
+                return (
+                  <li key={id} className={`py-6 grid sm:grid-cols-[minmax(0,14rem)_1fr_auto] gap-x-8 gap-y-1 items-baseline ${i === 0 ? 'sm:py-8' : ''}`}>
+                    <span className={`font-display tracking-display ${i === 0 ? 'text-3xl' : 'text-2xl'}`}>{m.name}</span>
+                    <span className="text-walnut max-w-prose">
+                      <span className="text-ink">{m.cities.map((c) => c.name).join(', ')}.</span>
+                      {MARKET_NOTES[id] && <> {MARKET_NOTES[id]}</>}
+                    </span>
+                    <span className="font-mono text-2xs text-walnut sm:text-right whitespace-nowrap" title="Typical first-site budget">
+                      {m.defaultBudget.replace(' – ', '–')}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
           <div className="mt-20 flex flex-col sm:flex-row sm:items-end justify-between gap-6 border border-ink rounded-panel bg-accent-fill text-on-accent p-6 sm:p-10 shadow-hard">
-            <p className="font-display text-3xl sm:text-4xl max-w-[18ch] leading-[1.02] tracking-display">The next shop on this list probably opened this week.</p>
+            <p className="font-display text-3xl sm:text-4xl max-w-[18ch] leading-[1.02] tracking-display">Somewhere near you, a shop opened this week without a website.</p>
             <Button href="/radar" variant="ink" size="lg" className="self-start sm:self-auto">
               Open the map <ArrowRight aria-hidden />
             </Button>
@@ -175,9 +209,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1240px] px-5 sm:px-8 py-8 grid gap-6 sm:grid-cols-[1fr_auto] text-xs text-walnut">
           <div className="space-y-2">
             <Wordmark compact />
+            <p className="text-ink">Designed and built in Hyderabad, India.</p>
             <p className="max-w-prose">
               About the data: places come from OpenStreetMap (Overpass), Google Places and, for Texas, the Comptroller&apos;s open
-              sales-tax permits. Typed place names are located with the Photon geocoder. A scheduled job scans every 8 hours. Leads and outreach notes are stored in Supabase. Pitch
+              sales-tax permits. Typed place names are located with the Photon geocoder. A scheduled job also rescans the original Hyderabad corridors every 8 hours. Leads and outreach notes are stored in Supabase. Pitch
               text is drafted by an AI model and should be read before sending.
             </p>
           </div>

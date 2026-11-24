@@ -134,7 +134,7 @@ export function Select({ className, children, ...p }: React.SelectHTMLAttributes
 }
 
 /* Wordmark: a small hand-set radar glyph + name. */
-export function Wordmark({ className, compact }: { className?: string; compact?: boolean }) {
+export function Wordmark({ className }: { className?: string; compact?: boolean }) {
   return (
     <span className={cn('inline-flex items-center gap-2 text-ink', className)}>
       <svg viewBox="0 0 24 24" className="size-6" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -143,8 +143,8 @@ export function Wordmark({ className, compact }: { className?: string; compact?:
         <path d="M12 12 L19.2 6.6" strokeLinecap="round" />
         <circle cx="15.6" cy="9.4" r="1.6" fill="rgb(var(--accent))" stroke="none" />
       </svg>
-      <span className="font-display text-lg leading-none tracking-display whitespace-nowrap">
-        Business Radar{!compact && <span className="hidden sm:inline text-walnut font-sans text-sm tracking-normal ml-1.5">Hyderabad</span>}
+      <span className="font-display text-base sm:text-lg leading-none tracking-display whitespace-nowrap">
+        Business Radar
       </span>
     </span>
   );

@@ -135,7 +135,7 @@ export function HeroMap() {
       </div>
       <figcaption className="mt-4 ml-2 text-xs text-walnut flex items-center gap-2">
         <span className="inline-block border border-dashed border-tan rounded-ctl px-1.5 py-0.5 font-mono text-2xs">sample</span>
-        Ten invented shops plotted on real neighbourhoods. Live leads appear once you run a scan.
+        Street level in Kokapet, Hyderabad: ten invented shops on real streets. Live leads appear once you run a scan.
       </figcaption>
     </figure>
   );

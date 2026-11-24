@@ -32,9 +32,9 @@ const mono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Business Radar — new Hyderabad shops before they have websites',
+  title: 'Business Radar — find newly opened shops before they have websites',
   description:
-    'Business Radar spots cafes, boutiques and salons that opened in Kokapet, Gachibowli and Jubilee Hills in the last few weeks, scores them, and hands your agency the WhatsApp number.',
+    'Business Radar spots cafes, boutiques and salons that opened in the last few weeks, from Shoreditch to Shibuya, scores them, and hands your agency the contact. Built in Hyderabad.',
 };
 
 export const viewport: Viewport = {
