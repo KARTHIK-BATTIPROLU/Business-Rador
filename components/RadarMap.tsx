@@ -35,8 +35,8 @@ const FALLBACK_STYLE: maplibregl.StyleSpecification = {
 
 export { AREA_COORDINATES } from '@/lib/areas';
 
-/* Palette for the basemap (hex because MapLibre paint props don't read CSS vars). */
-const C = {
+/* Palettes for the basemap (hex because MapLibre paint props don't read CSS vars). */
+const LIGHT = {
   paper: '#F5EFE4',
   land2: '#EFE7D8',
   green: '#E4DFC8',
@@ -54,8 +54,45 @@ const C = {
   stone: '#8C8174',
 };
 
+// Warm espresso night map: no blue-black, water is a dark sage.
+const DARK: typeof LIGHT = {
+  paper: '#1E1813',
+  land2: '#231C16',
+  green: '#2A281C',
+  water: '#191F1E',
+  building: '#2E261F',
+  roadMinor: '#342B23',
+  roadMajor: '#524232',
+  roadCase: '#2B231C',
+  hairline: '#4A3D31',
+  walnut: '#C4B29C',
+  tan: '#968068',
+  ink: '#F0E8DA',
+  surface: '#28211B',
+  accent: '#E07A4F',
+  stone: '#7A6F62',
+};
+
+const palette = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? DARK : LIGHT);
+
+/** Colour the radar's own layers for the current theme. */
+function paintRadar(map: maplibregl.Map) {
+  const C = palette();
+  const set = (id: string, prop: string, value: unknown) => {
+    if (map.getLayer(id)) map.setPaintProperty(id, prop, value);
+  };
+  set('radar-clusters', 'circle-color', C.ink);
+  set('radar-clusters', 'circle-stroke-color', C.surface);
+  set('radar-cluster-count', 'text-color', C.surface);
+  set('radar-hot-ring', 'circle-stroke-color', C.accent);
+  set('radar-point', 'circle-color', ['match', ['get', 'status'], ['closed', 'skip'], C.stone, C.ink]);
+  set('radar-point', 'circle-stroke-color', C.surface);
+  set('radar-selected', 'circle-stroke-color', C.ink);
+}
+
 /** Recolour whatever CARTO style is loaded: cream land, tan roads, muted water, no blue. */
 function paperize(map: maplibregl.Map) {
+  const C = palette();
   const style = map.getStyle();
   if (!style?.layers) return;
   const set = (id: string, prop: string, value: unknown) => {
@@ -126,6 +163,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
   const [ready, setReady] = useState(false);
 
   const install = useCallback((map: maplibregl.Map) => {
+    const C = palette();
     paperize(map);
     if (!map.getSource('radar-src')) {
       map.addSource('radar-src', { type: 'geojson', data: toGeoJSON(dataRef.current), cluster: true, clusterMaxZoom: 14, clusterRadius: 44 });
@@ -179,6 +217,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
         paint: { 'circle-radius': 17, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 1.5, 'circle-stroke-color': C.ink },
       });
     }
+    paintRadar(map);
   }, []);
 
   // Create the map once.
@@ -230,9 +269,9 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
       hoverRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'radar-hover' })
         .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
         .setHTML(
-          `<div style="font-family:var(--font-display),Georgia,serif;font-size:16px;line-height:1.15;color:${C.ink}">${escapeHTML(
+          `<div style="font-family:var(--font-display),Georgia,serif;font-size:16px;line-height:1.15;color:rgb(var(--ink))">${escapeHTML(
             String(f.properties?.name ?? ''),
-          )}</div><div style="font-family:var(--font-mono),monospace;font-size:11px;color:${C.walnut};margin-top:3px">${escapeHTML(
+          )}</div><div style="font-family:var(--font-mono),monospace;font-size:11px;color:rgb(var(--walnut));margin-top:3px">${escapeHTML(
             String(f.properties?.area ?? ''),
           )} · ${f.properties?.lead_score}</div>`,
         )
@@ -245,6 +284,14 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
     map.on('mouseenter', 'radar-clusters', () => (map.getCanvas().style.cursor = 'pointer'));
     map.on('mouseleave', 'radar-clusters', () => (map.getCanvas().style.cursor = ''));
 
+    // Repaint basemap + markers when the light/dark theme changes.
+    const themeObs = new MutationObserver(() => {
+      if (!map.isStyleLoaded()) return;
+      paperize(map);
+      paintRadar(map);
+    });
+    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
     // Keep the canvas sized when the drawer / sheet changes the layout.
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container.current);
@@ -252,6 +299,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
     mapRef.current = map;
     return () => {
       clearTimeout(fallbackTimer);
+      themeObs.disconnect();
       ro.disconnect();
       map.remove();
       mapRef.current = null;

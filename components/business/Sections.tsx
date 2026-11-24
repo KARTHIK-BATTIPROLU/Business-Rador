@@ -218,7 +218,7 @@ export function Photos({ b }: { b: Business }) {
             role="dialog"
             aria-modal="true"
             aria-label={open.caption || 'Photo'}
-            className="fixed inset-0 z-50 bg-ink/80 p-4 grid place-items-center"
+            className="fixed inset-0 z-50 bg-scrim/85 p-4 grid place-items-center"
             onClick={() => setOpen(null)}
             onKeyDown={(e) => e.key === 'Escape' && setOpen(null)}
             initial={reduce ? false : { opacity: 0 }}
@@ -227,7 +227,7 @@ export function Photos({ b }: { b: Business }) {
             transition={{ duration: 0.18 }}
           >
             <div className="relative w-full max-w-3xl rounded-panel overflow-hidden border border-ink bg-surface" onClick={(e) => e.stopPropagation()}>
-              <div className="relative w-full h-[65vh] bg-ink">
+              <div className="relative w-full h-[65vh] bg-sunk">
                 <Image src={open.url} alt={open.caption || `Photo of ${b.name}`} fill sizes="90vw" className="object-contain" />
               </div>
               <div className="flex items-center justify-between gap-3 p-3 text-sm">

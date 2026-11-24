@@ -12,6 +12,7 @@ import { AREA_COORDINATES } from '@/lib/areas';
 import { LeadDetail } from '@/components/radar/LeadDrawer';
 import { BottomSheet, type Snap } from '@/components/radar/BottomSheet';
 import { Wordmark } from '@/components/ui/primitives';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Button } from '@/components/ui/Button';
 import { SAMPLE_LEADS } from '@/lib/sample-leads';
 import { isSample } from '@/lib/lead';
@@ -289,6 +290,7 @@ export default function RadarPage() {
           <Button onClick={handleManualScan} disabled={isScanning} variant="primary" size="md" className="ml-auto">
             {isScanning ? 'Scanning…' : scanLabel}
           </Button>
+          <ThemeToggle className="-ml-1" />
         </div>
 
         <AnimatePresence>

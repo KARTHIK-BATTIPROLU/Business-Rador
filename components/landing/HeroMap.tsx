@@ -43,13 +43,13 @@ export function HeroMap() {
             </title>
             <rect width={W} height={H} fill="rgb(var(--paper))" />
             {/* parks / green patches */}
-            <path d="M600 330c40-14 90-6 118 20 22 21 12 58-26 64-46 8-96-6-112-36-10-19 0-40 20-48z" fill="#E4DFC8" />
-            <path d="M250 60c30-8 70 4 82 28 10 22-14 40-46 40-36 0-62-16-62-38 0-14 10-26 26-30z" fill="#E4DFC8" />
+            <path d="M600 330c40-14 90-6 118 20 22 21 12 58-26 64-46 8-96-6-112-36-10-19 0-40 20-48z" fill="rgb(var(--map-green))" />
+            <path d="M250 60c30-8 70 4 82 28 10 22-14 40-46 40-36 0-62-16-62-38 0-14 10-26 26-30z" fill="rgb(var(--map-green))" />
             {/* lakes: Durgam Cheruvu + Khajaguda, muted water */}
-            <path d="M400 214c12-10 30-8 36 6 7 16-2 34-16 40-14 6-26-2-28-16-2-12 0-22 8-30z" fill="#CFCDBE" />
-            <path d="M318 268c10-6 22-2 24 8 2 12-8 20-18 20s-16-8-14-16c1-5 4-9 8-12z" fill="#CFCDBE" />
+            <path d="M400 214c12-10 30-8 36 6 7 16-2 34-16 40-14 6-26-2-28-16-2-12 0-22 8-30z" fill="rgb(var(--map-water))" />
+            <path d="M318 268c10-6 22-2 24 8 2 12-8 20-18 20s-16-8-14-16c1-5 4-9 8-12z" fill="rgb(var(--map-water))" />
             {/* minor road grid */}
-            <g stroke="#E2D4BE" strokeWidth="3" fill="none" strokeLinecap="round">
+            <g stroke="rgb(var(--map-road-minor))" strokeWidth="3" fill="none" strokeLinecap="round">
               <path d="M120 120 L700 150" />
               <path d="M90 300 L760 320" />
               <path d="M140 440 L640 470" />
@@ -60,14 +60,14 @@ export function HeroMap() {
               <path d="M160 380 L380 340 L520 400" />
             </g>
             {/* main roads */}
-            <g stroke="#D3BC9A" strokeWidth="7" fill="none" strokeLinecap="round">
+            <g stroke="rgb(var(--map-road-major))" strokeWidth="7" fill="none" strokeLinecap="round">
               {/* Old Mumbai Highway, roughly */}
               <path d="M30 210 C 200 190, 360 180, 520 200 S 720 250, 800 240" />
               {/* Road towards Jubilee Hills */}
               <path d="M380 560 C 420 420, 500 300, 560 160 S 640 40, 660 0" />
             </g>
             {/* Outer Ring Road: the wide tan arc on the west */}
-            <path d="M90 0 C 40 140, 30 260, 70 380 S 170 540, 230 560" stroke="#C9AE87" strokeWidth="14" fill="none" strokeLinecap="round" />
+            <path d="M90 0 C 40 140, 30 260, 70 380 S 170 540, 230 560" stroke="rgb(var(--map-ring-road))" strokeWidth="14" fill="none" strokeLinecap="round" />
             <path d="M90 0 C 40 140, 30 260, 70 380 S 170 540, 230 560" stroke="rgb(var(--paper))" strokeWidth="1.5" strokeDasharray="10 12" fill="none" />
 
             {/* area labels in the display face */}

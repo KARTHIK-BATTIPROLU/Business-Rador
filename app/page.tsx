@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Wordmark } from '@/components/ui/primitives';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { HeroMap } from '@/components/landing/HeroMap';
 import { HandUnderline } from '@/components/landing/HandUnderline';
 import { WordReveal } from '@/components/motion/WordReveal';
@@ -39,6 +40,7 @@ export default function LandingPage() {
             <a href="#coverage" className="hidden md:inline-flex h-11 items-center px-3 text-sm text-walnut hover:text-ink">
               Coverage
             </a>
+            <ThemeToggle />
             <Button href="/radar" variant="ink" size="sm">
               Open the map
             </Button>

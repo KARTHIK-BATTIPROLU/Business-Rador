@@ -21,7 +21,47 @@
   --brick: 163 59 43; /* #A33B2B */
   --stone: 140 129 116; /* #8C8174 */
   --stone-deep: 110 100 88; /* #6E6458 */
+  --shadow: 27 22 18; /* hard offset shadow colour */
+  --scrim: 27 22 18; /* behind modals */
+  /* map + landing map illustration */
+  --map-green: 228 223 200; /* #E4DFC8 */
+  --map-water: 207 205 190; /* #CFCDBE */
+  --map-road-minor: 226 212 190; /* #E2D4BE */
+  --map-road-major: 211 188 154; /* #D3BC9A */
+  --map-ring-road: 201 174 135; /* #C9AE87 */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.21 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   color-scheme: light;
+}
+
+/* Dark: warm espresso, never blue-black. Ink flips to cream, so ink-filled
+   buttons become cream buttons with espresso text. Contrast checked (AA). */
+[data-theme='dark'] {
+  --paper: 30 24 19; /* #1E1813 espresso */
+  --surface: 40 33 27; /* #28211B */
+  --sunk: 22 17 13; /* #16110D */
+  --ink: 240 232 218; /* #F0E8DA cream, 14.4:1 on paper */
+  --walnut: 196 178 156; /* #C4B29C, 8.5:1 */
+  --tan: 150 128 104; /* #968068, icons + large labels only */
+  --hairline: 74 61 49; /* #4A3D31 */
+  --accent: 224 122 79; /* #E07A4F */
+  --accent-strong: 229 138 95; /* #E58A5F, espresso text on it 6.1:1 */
+  --accent-wash: 74 40 26; /* #4A281A */
+  --olive: 142 158 78;
+  --olive-deep: 169 184 110; /* #A9B86E */
+  --ochre: 214 164 67;
+  --ochre-deep: 221 178 90; /* #DDB25A */
+  --brick: 224 119 98; /* #E07762 */
+  --stone: 156 145 131;
+  --stone-deep: 179 169 155; /* #B3A99B */
+  --shadow: 107 86 65; /* #6B5641: a visible but quiet offset on espresso */
+  --scrim: 10 8 6;
+  --map-green: 42 40 28;
+  --map-water: 25 31 30;
+  --map-road-minor: 52 43 35;
+  --map-road-major: 82 66 50;
+  --map-ring-road: 104 84 62;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0 0.85 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color-scheme: dark;
 }
 
 @layer base {
@@ -31,7 +71,7 @@
   body {
     @apply bg-paper font-sans text-base text-ink antialiased;
     /* Paper grain: fractal noise at ~3.5%, page background only. */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.21 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-image: var(--grain);
     font-feature-settings: 'ss01' on;
   }
   h1, h2, h3 {
@@ -76,12 +116,15 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--hairline)); border-radius: 8px; border: 2px solid rgb(var(--paper)); }
 
+/* Theme switch: no transition flash, gentle colour change otherwise. */
+html.theme-switching * { transition: background-color 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out !important; }
+
 /* MapLibre popup + controls restyled to the paper palette */
 .maplibregl-popup-content {
   background: rgb(var(--surface)) !important;
   border: 1px solid rgb(var(--hairline));
   border-radius: 14px !important;
-  box-shadow: 4px 4px 0 rgb(var(--ink)) !important;
+  box-shadow: 4px 4px 0 rgb(var(--shadow)) !important;
   padding: 14px 16px !important;
   color: rgb(var(--ink));
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -105,6 +148,10 @@
 .radar-hover .maplibregl-popup-content {
   padding: 8px 10px !important;
   border-color: rgb(var(--ink));
-  box-shadow: 2px 2px 0 rgb(var(--ink)) !important;
+  box-shadow: 2px 2px 0 rgb(var(--shadow)) !important;
   border-radius: 6px !important;
 }
+
+/* MapLibre's control icons are black SVGs; lighten them on espresso. */
+[data-theme='dark'] .maplibregl-ctrl button .maplibregl-ctrl-icon { filter: invert(0.9) sepia(0.2); }
+[data-theme='dark'] .maplibregl-ctrl-attrib-button { filter: invert(0.9); }

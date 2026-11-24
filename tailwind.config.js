@@ -17,6 +17,7 @@ module.exports = {
       walnut: v('walnut'),
       tan: v('tan'),
       hairline: v('hairline'),
+      scrim: v('scrim'),
       accent: { DEFAULT: v('accent'), strong: v('accent-strong'), wash: v('accent-wash') },
       status: {
         new: v('olive'),
@@ -49,8 +50,8 @@ module.exports = {
     extend: {
       borderRadius: { ctl: '6px', panel: '14px' },
       boxShadow: {
-        hard: '4px 4px 0 rgb(var(--ink))',
-        'hard-sm': '2px 2px 0 rgb(var(--ink))',
+        hard: '4px 4px 0 rgb(var(--shadow))',
+        'hard-sm': '2px 2px 0 rgb(var(--shadow))',
         none: 'none',
       },
       maxWidth: { prose: '62ch' },

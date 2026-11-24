@@ -8,6 +8,7 @@ import { useDossier } from '@/components/business/useDossier';
 import { Notes, Overview, Photos, PitchKit, Presence } from '@/components/business/Sections';
 import { whatsappPitch, emailPitch } from '@/components/business/pitch';
 import { Skeleton, StatusSelect, Wordmark } from '@/components/ui/primitives';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Button, buttonClass } from '@/components/ui/Button';
 import { isSample, mapsHref, whatsappHref } from '@/lib/lead';
 
@@ -94,6 +95,7 @@ export default function BusinessDetailsPage() {
               <span className="hidden md:inline">{d.isEnriching ? 'Checking…' : 'Check again'}</span>
             </button>
           )}
+          <ThemeToggle />
         </div>
         {d.isEnriching && (
           <p role="status" className="border-t border-hairline bg-surface px-5 py-1.5 text-center text-xs text-walnut">
