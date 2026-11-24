@@ -2,29 +2,32 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 
-// Display: Newsreader, a newspaper text face with an optical-size axis. At 56px it
-// gets fine, high-contrast detail; at 20px it stays sturdy enough for card titles.
-// A "local paper" voice suits a product whose whole job is noticing neighbourhood shops.
+// Display: Funnel Display (Kristian Möller / NORD ID, Google Fonts). A tight,
+// slightly condensed grotesk with odd, confident details. Set heavy and tight it
+// reads like shop signage, which is what this product is about, and it avoids
+// the serif-headline look that every generated landing page uses now.
 const display = localFont({
-  src: './fonts/Newsreader-opsz.woff2',
+  src: './fonts/FunnelDisplay-wght.woff2',
   variable: '--font-display',
   weight: '300 800',
   display: 'swap',
 });
 
-// UI/body: Hanken Grotesk — humanist, slightly open apertures, not Inter.
+// UI/body: Funnel Sans, the text cut of the same family, so headings and body
+// share skeletons without looking like one weight blown up.
 const sans = localFont({
-  src: './fonts/HankenGrotesk-wght.woff2',
+  src: './fonts/FunnelSans-wght.woff2',
   variable: '--font-sans',
   weight: '300 800',
   display: 'swap',
 });
 
-// Data: JetBrains Mono with tabular figures for scores, counts and dates.
+// Data: SUSE Mono (2025) for scores, counts and dates. Squarer than the usual
+// developer monos, with tabular figures.
 const mono = localFont({
-  src: './fonts/JetBrainsMono-wght.woff2',
+  src: './fonts/SUSEMono-wght.woff2',
   variable: '--font-mono',
-  weight: '300 700',
+  weight: '100 800',
   display: 'swap',
 });
 
@@ -36,8 +39,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F5EFE4' },
-    { media: '(prefers-color-scheme: dark)', color: '#1E1813' },
+    { media: '(prefers-color-scheme: light)', color: '#FAF6EC' },
+    { media: '(prefers-color-scheme: dark)', color: '#1A1712' },
   ],
 };
 

@@ -3,8 +3,8 @@ import localFont from 'next/font/local';
 import { SAMPLE_LEADS } from '@/lib/sample-leads';
 import { launchLabel } from '@/lib/lead';
 
-// Caveat is loaded only here, for the single handwritten note on the map.
-const hand = localFont({ src: '../../app/fonts/Caveat-500.woff2', display: 'swap', variable: '--font-hand' });
+// Story Script (Google Fonts, 2025) is loaded only here, for the one handwritten note on the map.
+const hand = localFont({ src: '../../app/fonts/StoryScript-400.woff2', display: 'swap', variable: '--font-hand' });
 
 // Projection for the crop: west Hyderabad, lng 78.32–78.45, lat 17.38–17.47.
 const W = 800;
@@ -71,7 +71,7 @@ export function HeroMap() {
             <path d="M90 0 C 40 140, 30 260, 70 380 S 170 540, 230 560" stroke="rgb(var(--paper))" strokeWidth="1.5" strokeDasharray="10 12" fill="none" />
 
             {/* area labels in the display face */}
-            <g fontFamily="var(--font-display)" fontSize="17" fill="rgb(var(--walnut))">
+            <g fontFamily="var(--font-sans)" fontSize="15" fontWeight="500" fill="rgb(var(--walnut))">
               {AREAS.map(([n, lng, lat]) => (
                 <text key={n} x={px(lng)} y={py(lat)} textAnchor="middle" letterSpacing="0.2">
                   {n}
@@ -99,10 +99,10 @@ export function HeroMap() {
               strokeLinecap="round"
             />
             <path d={`M ${fx + 22} ${fy + 32} L ${fx + 24} ${fy + 18} L ${fx + 37} ${fy + 24}`} stroke="rgb(var(--ink))" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            <text x={fx + 158} y={fy + 88} fontFamily="var(--font-hand)" fontSize="26" fill="rgb(var(--ink))">
+            <text x={fx + 158} y={fy + 88} fontFamily="var(--font-hand)" fontSize="24" fill="rgb(var(--ink))">
               11 days old,
             </text>
-            <text x={fx + 158} y={fy + 116} fontFamily="var(--font-hand)" fontSize="26" fill="rgb(var(--ink))">
+            <text x={fx + 158} y={fy + 116} fontFamily="var(--font-hand)" fontSize="24" fill="rgb(var(--ink))">
               still no website
             </text>
 

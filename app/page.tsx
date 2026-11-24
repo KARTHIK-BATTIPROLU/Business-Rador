@@ -162,9 +162,9 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          <div className="mt-20 flex flex-col sm:flex-row sm:items-end justify-between gap-6 border border-ink rounded-panel bg-surface p-6 sm:p-8">
-            <p className="font-display text-2xl sm:text-3xl max-w-[22ch] leading-tight">The next shop on this list probably opened this week.</p>
-            <Button href="/radar" variant="primary" size="lg" className="self-start sm:self-auto">
+          <div className="mt-20 flex flex-col sm:flex-row sm:items-end justify-between gap-6 border border-ink rounded-panel bg-accent-fill text-on-accent p-6 sm:p-10 shadow-hard">
+            <p className="font-display text-3xl sm:text-4xl max-w-[18ch] leading-[1.02] tracking-display">The next shop on this list probably opened this week.</p>
+            <Button href="/radar" variant="ink" size="lg" className="self-start sm:self-auto">
               Open the map <ArrowRight aria-hidden />
             </Button>
           </div>

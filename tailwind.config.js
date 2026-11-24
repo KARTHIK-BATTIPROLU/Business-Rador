@@ -18,7 +18,8 @@ module.exports = {
       tan: v('tan'),
       hairline: v('hairline'),
       scrim: v('scrim'),
-      accent: { DEFAULT: v('accent'), strong: v('accent-strong'), wash: v('accent-wash') },
+      accent: { DEFAULT: v('accent'), strong: v('accent-strong'), wash: v('accent-wash'), fill: v('accent-fill') },
+      'on-accent': v('on-accent'),
       status: {
         new: v('olive'),
         'new-ink': v('olive-deep'),
@@ -30,7 +31,7 @@ module.exports = {
       },
     },
     fontFamily: {
-      display: ['var(--font-display)', 'Georgia', 'serif'],
+      display: ['var(--font-display)', 'system-ui', 'sans-serif'],
       sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
     },
@@ -55,7 +56,7 @@ module.exports = {
         none: 'none',
       },
       maxWidth: { prose: '62ch' },
-      letterSpacing: { display: '-0.02em' },
+      letterSpacing: { display: '-0.035em' },
       transitionTimingFunction: { out: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       keyframes: {
         shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },

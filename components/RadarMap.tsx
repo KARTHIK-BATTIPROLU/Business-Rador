@@ -33,47 +33,47 @@ const FALLBACK_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
   sources: {},
-  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#F5EFE4' } }],
+  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#FAF6EC' } }],
 };
 
 export { AREA_COORDINATES } from '@/lib/areas';
 
 /* Palettes for the basemap (hex because MapLibre paint props don't read CSS vars). */
 const LIGHT = {
-  paper: '#F5EFE4',
-  land2: '#EFE7D8',
-  green: '#E4DFC8',
-  water: '#CFCDBE',
-  building: '#E7DCCB',
-  roadMinor: '#E8DAC3',
-  roadMajor: '#D6C1A0',
-  roadCase: '#D9C7AB',
-  hairline: '#CDBBA3',
-  walnut: '#5A4636',
-  tan: '#8A6A4F',
-  ink: '#1B1612',
-  surface: '#FBF7EF',
-  accent: '#C2562B',
-  stone: '#8C8174',
+  paper: '#FAF6EC',
+  land2: '#F3EDDD',
+  green: '#E3E8D2',
+  water: '#D3DCD6',
+  building: '#EDE5D3',
+  roadMinor: '#EBDDC2',
+  roadMajor: '#E2C48F',
+  roadCase: '#DCCBAA',
+  hairline: '#DCD3BC',
+  walnut: '#5B5647',
+  tan: '#8A836F',
+  ink: '#22201A',
+  surface: '#FFFCF4',
+  accent: '#C9700E',
+  stone: '#9A917F',
 };
 
 // Warm espresso night map: no cold near-black, water is a dark sage.
 const DARK: typeof LIGHT = {
-  paper: '#1E1813',
-  land2: '#231C16',
-  green: '#2A281C',
-  water: '#191F1E',
-  building: '#2E261F',
-  roadMinor: '#342B23',
-  roadMajor: '#524232',
-  roadCase: '#2B231C',
-  hairline: '#4A3D31',
-  walnut: '#C4B29C',
-  tan: '#968068',
-  ink: '#F0E8DA',
-  surface: '#28211B',
-  accent: '#E07A4F',
-  stone: '#7A6F62',
+  paper: '#1A1712',
+  land2: '#1F1B15',
+  green: '#232A1C',
+  water: '#18201E',
+  building: '#29241C',
+  roadMinor: '#302A21',
+  roadMajor: '#5A4628',
+  roadCase: '#26211A',
+  hairline: '#3E382D',
+  walnut: '#C2B9A4',
+  tan: '#968E78',
+  ink: '#F3EDE0',
+  surface: '#24201A',
+  accent: '#E89A35',
+  stone: '#6F6858',
 };
 
 const palette = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? DARK : LIGHT);
@@ -272,7 +272,7 @@ export const RadarMap: React.FC<RadarMapProps> = ({ businesses, selectedBusiness
       hoverRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'radar-hover' })
         .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
         .setHTML(
-          `<div style="font-family:var(--font-display),Georgia,serif;font-size:16px;line-height:1.15;color:rgb(var(--ink))">${escapeHTML(
+          `<div style="font-family:var(--font-display),system-ui,sans-serif;font-weight:650;font-size:16px;line-height:1.15;color:rgb(var(--ink))">${escapeHTML(
             String(f.properties?.name ?? ''),
           )}</div><div style="font-family:var(--font-mono),monospace;font-size:11px;color:rgb(var(--walnut));margin-top:3px">${escapeHTML(
             String(f.properties?.area ?? ''),
