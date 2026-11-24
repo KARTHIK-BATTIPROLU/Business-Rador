@@ -1,188 +1,162 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Business } from '@/lib/types';
-import { Layers, Crosshair } from 'lucide-react';
+import { Crosshair, LocateFixed } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface RadarMapProps {
   businesses: Business[];
   selectedBusiness?: Business | null;
   onSelectBusiness: (b: Business) => void;
   flyToCoords?: { lat: number; lng: number; zoom?: number } | null;
+  /** Scan whatever the map is showing: centre + a radius derived from zoom. */
   onScanViewport?: (coords: { lat: number; lng: number; radius: number }) => void;
   isScanning?: boolean;
+  /** Where a running scan is looking; shows ripple rings there. */
+  scanFocus?: { lat: number; lng: number } | null;
+  /** Lead hovered in the list: its pin pulses. */
+  hoveredId?: string | null;
+  onHoverBusiness?: (id: string | null) => void;
+  onCenterChange?: (c: { lat: number; lng: number }) => void;
+  className?: string;
 }
 
+// Both bases are CARTO vector styles, recoloured below to the paper palette.
 const MAP_STYLES = {
-  positron: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  paper: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  streets: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+} as const;
+type StyleKey = keyof typeof MAP_STYLES;
+
+const HOME: [number, number] = [78.36, 17.43];
+
+// If the CARTO style can't be fetched (offline, blocked network), fall back to a
+// plain paper background so the leads still plot.
+const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
+  sources: {},
+  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#FAF6EC' } }],
 };
 
-export const AREA_COORDINATES: Record<string, [number, number]> = {
-  // Global & Continents
-  Global: [-97.7431, 30.2672],
-  World: [0, 20],
+export { AREA_COORDINATES } from '@/lib/areas';
 
-  // United States Metros & Corridors
-  'South Congress': [-97.7495, 30.2510],
-  'East Austin': [-97.7210, 30.2635],
-  'Downtown Austin': [-97.7402, 30.2680],
-  Austin: [-97.7431, 30.2672],
-  'Uptown Dallas': [-96.8040, 32.7985],
-  'Deep Ellum': [-96.7845, 32.7835],
-  Dallas: [-96.7970, 32.7767],
-  Montrose: [-95.3910, 29.7420],
-  'The Heights': [-95.3980, 29.7990],
-  Houston: [-95.3698, 29.7604],
-  'San Antonio': [-98.4936, 29.4241],
-  'Fort Worth': [-97.3308, 32.7555],
-  Texas: [-97.7431, 30.2672],
-  SoHo: [-73.9990, 40.7233],
-  Williamsburg: [-73.9571, 40.7178],
-  'West Village': [-74.0048, 40.7358],
-  'New York City': [-73.9851, 40.7488],
-  'West Hollywood': [-118.3617, 34.0900],
-  'Santa Monica': [-118.4912, 34.0195],
-  'Los Angeles': [-118.2437, 34.0522],
-  Wynwood: [-80.1989, 25.8042],
-  Miami: [-80.1918, 25.7617],
-  'The Loop': [-87.6298, 41.8819],
-  'West Loop': [-87.6534, 41.8867],
-  Chicago: [-87.6298, 41.8781],
-  'Mission District': [-122.4192, 37.7599],
-  'San Francisco': [-122.4194, 37.7749],
-
-  // United Kingdom Metros & Corridors
-  Shoreditch: [-0.0785, 51.5245],
-  Soho: [-0.1340, 51.5135],
-  'Covent Garden': [-0.1240, 51.5117],
-  Camden: [-0.1426, 51.5390],
-  Hackney: [-0.0553, 51.5450],
-  'Notting Hill': [-0.2057, 51.5091],
-  London: [-0.1276, 51.5074],
-  'Northern Quarter': [-2.2350, 53.4835],
-  Manchester: [-2.2426, 53.4808],
-  'Old Town Edinburgh': [-3.1890, 55.9486],
-  Edinburgh: [-3.1883, 55.9533],
-
-  // India Metros & Corridors
-  Kokapet: [78.3298, 17.4156],
-  Gachibowli: [78.3489, 17.44],
-  'HITECH City': [78.3908, 17.4486],
-  Madhapur: [78.3908, 17.4484],
-  'Financial District': [78.343, 17.417],
-  Nanakramguda: [78.355, 17.418],
-  'Jubilee Hills': [78.4072, 17.4312],
-  'Banjara Hills': [78.435, 17.4156],
-  Kondapur: [78.355, 17.46],
-  Narsingi: [78.3588, 17.3883],
-  Hyderabad: [78.35, 17.43],
-  Indiranagar: [77.6412, 12.9784],
-  Koramangala: [77.6245, 12.9352],
-  'HSR Layout': [77.6408, 12.9121],
-  Bangalore: [77.5946, 12.9716],
-  'Bandra West': [72.8295, 19.0596],
-  BKC: [72.8682, 19.0657],
-  Mumbai: [72.8777, 19.0760],
-  'Hauz Khas': [77.2065, 28.5494],
-  'Connaught Place': [77.2167, 28.6304],
-  Delhi: [77.2090, 28.6139],
-
-  // Canada
-  'Queen Street West': [-79.4042, 43.6487],
-  Toronto: [-79.3832, 43.6532],
-  Gastown: [-123.1089, 49.2838],
-  Vancouver: [-123.1207, 49.2827],
-
-  // Australia
-  'Surry Hills': [151.2120, -33.8860],
-  'Bondi Beach': [151.2743, -33.8915],
-  Sydney: [151.2093, -33.8688],
-  Fitzroy: [144.9780, -37.7985],
-  Melbourne: [144.9631, -37.8136],
-
-  // Europe (Germany, France)
-  Mitte: [13.4040, 52.5180],
-  Kreuzberg: [13.4020, 52.4990],
-  Berlin: [13.4050, 52.5200],
-  'Le Marais': [2.3600, 48.8575],
-  'Saint-Germain': [2.3330, 48.8538],
-  Paris: [2.3522, 48.8566],
-
-  // Asia (Japan, UAE, Singapore)
-  Shibuya: [139.7016, 35.6580],
-  Shinjuku: [139.7006, 35.6938],
-  Ginza: [139.7671, 35.6719],
-  Tokyo: [139.6917, 35.6895],
-  'Downtown Dubai': [55.2744, 25.1972],
-  'Dubai Marina': [55.1403, 25.0805],
-  Dubai: [55.2708, 25.2048],
-  'Orchard Road': [103.8340, 1.3048],
-  Singapore: [103.8198, 1.3521],
+/* Palettes for the basemap (hex because MapLibre paint props don't read CSS vars). */
+const LIGHT = {
+  paper: '#FAF6EC',
+  land2: '#F3EDDD',
+  green: '#E3E8D2',
+  water: '#D3DCD6',
+  building: '#EDE5D3',
+  roadMinor: '#EBDDC2',
+  roadMajor: '#E2C48F',
+  roadCase: '#DCCBAA',
+  hairline: '#DCD3BC',
+  walnut: '#5B5647',
+  tan: '#8A836F',
+  ink: '#22201A',
+  surface: '#FFFCF4',
+  accent: '#C9700E',
+  stone: '#9A917F',
 };
 
-function createPopupHTML(b: Business): string {
-  const launchBadge = b.is_opening_soon
-    ? '<span style="display:inline-block;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #c7d2fe;">✨ OPENING SOON</span>'
-    : b.actual_launch_date
-    ? `<span style="display:inline-block;background:#ecfdf5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid #a7f3d0;">🚀 Launched ${b.actual_launch_date}</span>`
-    : '';
+// Warm espresso night map: no cold near-black, water is a dark sage.
+const DARK: typeof LIGHT = {
+  paper: '#1A1712',
+  land2: '#1F1B15',
+  green: '#232A1C',
+  water: '#18201E',
+  building: '#29241C',
+  roadMinor: '#302A21',
+  roadMajor: '#5A4628',
+  roadCase: '#26211A',
+  hairline: '#3E382D',
+  walnut: '#C2B9A4',
+  tan: '#968E78',
+  ink: '#F3EDE0',
+  surface: '#24201A',
+  accent: '#E89A35',
+  stone: '#6F6858',
+};
 
-  const budgetBadge = b.estimated_site_budget
-    ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;border:1px solid #fde68a;">💰 ${b.estimated_site_budget}</span>`
-    : '';
+const palette = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? DARK : LIGHT);
 
-  const waLink = b.whatsapp
-    ? `<a href="https://wa.me/${b.whatsapp}?text=Hi%20${encodeURIComponent(b.name)},%20congratulations%20on%20your%20new%20launch%20in%20${encodeURIComponent(b.area)}!" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">💬 WhatsApp</a>`
-    : '';
-
-  const callLink = b.phone
-    ? `<a href="tel:${b.phone}" style="flex:1;text-align:center;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📞 Call</a>`
-    : '';
-
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.name + ' ' + (b.area || '') + ' ' + (b.city || ''))}`;
-
-  const mapsLink = `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📍 Maps</a>`;
-
-  const igHref = b.instagram_handle
-    ? (b.instagram_url || `https://www.instagram.com/${b.instagram_handle.replace('@', '')}/`)
-    : `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com "' + b.name + '" "' + (b.city || b.area) + '"')}`;
-
-  const igLink = `<a href="${igHref}" target="_blank" rel="noopener noreferrer" style="flex:1;text-align:center;background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;">📸 IG</a>`;
-
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px; min-width: 240px; max-width: 290px;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:5px;">
-        <h4 style="margin:0; font-size:14px; font-weight:700; color:#0f172a; line-height:1.25;">${b.name}</h4>
-        <span style="background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:11px; padding:2px 6px; border-radius:6px; border:1px solid #bfdbfe; white-space:nowrap;">🔥 ${b.lead_score}</span>
-      </div>
-      <div style="font-size:11px; color:#64748b; margin-bottom:6px; display:flex; gap:6px; align-items:center;">
-        <span>📍 <strong>${b.area || b.city}</strong> (${b.city})</span>
-        <span>•</span>
-        <span>${b.category}</span>
-      </div>
-      <div style="margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap;">
-        ${launchBadge}
-        ${budgetBadge}
-      </div>
-      <p style="font-size:11px; color:#475569; margin:0 0 10px 0; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-        ${b.description || 'Newly discovered commercial business.'}
-      </p>
-      <div style="display:flex; gap:5px; margin-bottom:8px;">
-        ${mapsLink}
-        ${waLink || callLink}
-        ${igLink}
-      </div>
-      <a href="/business/${b.id}" style="display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; background:#2563eb; color:#ffffff; padding:7px 10px; border-radius:7px; font-size:12px; font-weight:700; text-decoration:none; box-shadow:0 2px 4px rgba(37,99,235,0.25);">
-        <span>See Details, Dossier & Pitch</span>
-        <span>→</span>
-      </a>
-    </div>
-  `;
+/** Colour the radar's own layers for the current theme. */
+function paintRadar(map: maplibregl.Map) {
+  const C = palette();
+  const set = (id: string, prop: string, value: unknown) => {
+    if (map.getLayer(id)) map.setPaintProperty(id, prop, value);
+  };
+  set('radar-clusters', 'circle-color', C.ink);
+  set('radar-clusters', 'circle-stroke-color', C.surface);
+  set('radar-cluster-count', 'text-color', C.surface);
+  set('radar-hot-ring', 'circle-stroke-color', C.accent);
+  set('radar-point', 'circle-color', ['match', ['get', 'status'], ['closed', 'skip'], C.stone, C.ink]);
+  set('radar-point', 'circle-stroke-color', C.surface);
+  set('radar-selected', 'circle-stroke-color', C.ink);
 }
+
+/** Recolour whatever CARTO style is loaded: cream land, tan roads, muted water, no blue. */
+function paperize(map: maplibregl.Map) {
+  const C = palette();
+  const style = map.getStyle();
+  if (!style?.layers) return;
+  const set = (id: string, prop: string, value: unknown) => {
+    try {
+      map.setPaintProperty(id, prop, value);
+    } catch {
+      /* layer may not support the property */
+    }
+  };
+  for (const layer of style.layers) {
+    const id = layer.id.toLowerCase();
+    if (id.startsWith('radar-')) continue;
+    switch (layer.type) {
+      case 'background':
+        set(layer.id, 'background-color', C.paper);
+        break;
+      case 'fill':
+        if (id.includes('water')) set(layer.id, 'fill-color', C.water);
+        else if (id.includes('building')) {
+          set(layer.id, 'fill-color', C.building);
+          set(layer.id, 'fill-outline-color', C.hairline);
+        } else if (/park|wood|grass|green|landcover|nature|cemetery|pitch/.test(id)) set(layer.id, 'fill-color', C.green);
+        else set(layer.id, 'fill-color', C.land2);
+        break;
+      case 'line':
+        if (id.includes('water')) set(layer.id, 'line-color', C.water);
+        else if (id.includes('boundary')) set(layer.id, 'line-color', C.hairline);
+        else if (id.includes('rail')) set(layer.id, 'line-color', C.hairline);
+        else if (id.includes('case') || id.includes('casing')) set(layer.id, 'line-color', C.roadCase);
+        else if (/motorway|trunk|primary|major|highway/.test(id)) set(layer.id, 'line-color', C.roadMajor);
+        else set(layer.id, 'line-color', C.roadMinor);
+        break;
+      case 'symbol':
+        set(layer.id, 'text-color', id.includes('water') ? C.tan : C.walnut);
+        set(layer.id, 'text-halo-color', C.paper);
+        set(layer.id, 'icon-opacity', 0.55);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+const toGeoJSON = (items: Business[]): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
+  type: 'FeatureCollection',
+  features: items
+    .filter((b) => b.lat && b.lng)
+    .map((b) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
+      properties: { id: b.id, name: b.name, area: b.area, lead_score: b.lead_score, status: b.outreach_status },
+    })),
+});
+
+const escapeHTML = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 export const RadarMap: React.FC<RadarMapProps> = ({
   businesses,
@@ -191,338 +165,311 @@ export const RadarMap: React.FC<RadarMapProps> = ({
   flyToCoords,
   onScanViewport,
   isScanning,
+  scanFocus,
+  hoveredId,
+  onHoverBusiness,
+  onCenterChange,
+  className,
 }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<maplibregl.Map | null>(null);
-  const businessesRef = useRef<Business[]>(businesses);
-  businessesRef.current = businesses;
-  const popupRef = useRef<maplibregl.Popup | null>(null);
-  const [currentStyle, setCurrentStyle] = useState<'positron' | 'voyager' | 'dark'>('positron');
+  const hoverCb = useRef(onHoverBusiness);
+  hoverCb.current = onHoverBusiness;
+  const centerCb = useRef(onCenterChange);
+  centerCb.current = onCenterChange;
+  const pulseRef = useRef<maplibregl.Marker | null>(null);
+  const rippleRef = useRef<maplibregl.Marker | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const dataRef = useRef<Business[]>(businesses);
+  dataRef.current = businesses;
+  const selectRef = useRef(onSelectBusiness);
+  selectRef.current = onSelectBusiness;
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedBusiness?.id ?? null;
+  const hoverRef = useRef<maplibregl.Popup | null>(null);
+  const [styleKey, setStyleKey] = useState<StyleKey>('paper');
+  const [ready, setReady] = useState(false);
 
-  const toGeoJSON = (items: Business[]): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
-    type: 'FeatureCollection',
-    features: items
-      .filter((b) => b.lat && b.lng)
-      .map((b) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [b.lng, b.lat],
-        },
-        properties: {
-          id: b.id,
-          name: b.name,
-          category: b.category,
-          area: b.area,
-          lead_score: b.lead_score,
-          status: b.outreach_status,
-          phone: b.phone || '',
-          whatsapp: b.whatsapp || '',
-          instagram_handle: b.instagram_handle || '',
-          first_seen_at: b.first_seen_at,
-        },
-      })),
-  });
-
-  useEffect(() => {
-    if (!mapContainer.current || mapInstance.current) return;
-
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: MAP_STYLES[currentStyle],
-      center: [78.35, 17.43],
-      zoom: 12.4,
-      pitch: 25,
-    });
-
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-
-    map.on('load', () => {
-      map.addSource('businesses-source', {
-        type: 'geojson',
-        data: toGeoJSON(businesses),
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 45,
-      });
-
-      // Cluster circle layer — Bangalore Startup Map inspired density bubbles
+  const install = useCallback((map: maplibregl.Map) => {
+    const C = palette();
+    paperize(map);
+    if (!map.getSource('radar-src')) {
+      map.addSource('radar-src', { type: 'geojson', data: toGeoJSON(dataRef.current), cluster: true, clusterMaxZoom: 14, clusterRadius: 44 });
+    }
+    if (!map.getLayer('radar-clusters')) {
       map.addLayer({
-        id: 'clusters',
+        id: 'radar-clusters',
         type: 'circle',
-        source: 'businesses-source',
+        source: 'radar-src',
         filter: ['has', 'point_count'],
         paint: {
-          'circle-color': [
-            'step',
-            ['get', 'point_count'],
-            '#10B981', // < 10: Emerald Green (bangalorestartupmap style)
-            10,
-            '#F59E0B', // 10-30: Warm Amber
-            30,
-            '#F97316', // 30-80: Sunset Orange
-            80,
-            '#EF4444', // 80+: Crimson
-          ],
-          'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 30, 30, 80, 36],
-          'circle-stroke-width': 3.5,
-          'circle-stroke-color': '#FFFFFF',
-          'circle-opacity': 0.95,
+          'circle-color': C.ink,
+          'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 24],
+          'circle-stroke-width': 3,
+          'circle-stroke-color': C.surface,
         },
       });
-
-      // Cluster label
       map.addLayer({
-        id: 'cluster-count',
+        id: 'radar-cluster-count',
         type: 'symbol',
-        source: 'businesses-source',
+        source: 'radar-src',
         filter: ['has', 'point_count'],
-        layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-size': 13,
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-        },
-        paint: {
-          'text-color': '#FFFFFF',
-        },
+        layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 12, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] },
+        paint: { 'text-color': C.surface },
       });
-
-      // Individual unclustered pin
+      // Terracotta ring under high scorers.
       map.addLayer({
-        id: 'unclustered-point',
+        id: 'radar-hot-ring',
         type: 'circle',
-        source: 'businesses-source',
+        source: 'radar-src',
+        filter: ['all', ['!', ['has', 'point_count']], ['>=', ['get', 'lead_score'], 85]],
+        paint: { 'circle-radius': 10, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 2.5, 'circle-stroke-color': C.accent },
+      });
+      map.addLayer({
+        id: 'radar-point',
+        type: 'circle',
+        source: 'radar-src',
         filter: ['!', ['has', 'point_count']],
         paint: {
-          'circle-color': [
-            'match',
-            ['get', 'status'],
-            'contacted',
-            '#6366F1',
-            'interested',
-            '#F59E0B',
-            'closed',
-            '#10B981',
-            'skip',
-            '#94A3B8',
-            '#2563EB',
-          ],
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['get', 'lead_score'],
-            0,
-            7,
-            100,
-            11,
-          ],
-          'circle-stroke-width': 2.5,
-          'circle-stroke-color': '#FFFFFF',
+          'circle-radius': 5.5,
+          'circle-color': ['match', ['get', 'status'], ['closed', 'skip'], C.stone, C.ink],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': C.surface,
         },
       });
-
-      map.on('click', 'clusters', async (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        const clusterId = features[0]?.properties?.cluster_id;
-        const source = map.getSource('businesses-source') as maplibregl.GeoJSONSource;
-        if (!source || clusterId === undefined) return;
-
-        const zoom = await source.getClusterExpansionZoom(clusterId);
-        const coords = (features[0].geometry as GeoJSON.Point).coordinates as [number, number];
-        map.flyTo({ center: coords, zoom: Math.min(zoom, 16), speed: 1.2 });
+      map.addLayer({
+        id: 'radar-selected',
+        type: 'circle',
+        source: 'radar-src',
+        filter: ['==', ['get', 'id'], selectedIdRef.current ?? ''],
+        paint: { 'circle-radius': 17, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 1.5, 'circle-stroke-color': C.ink },
       });
-
-      map.on('click', 'unclustered-point', (e) => {
-        const feature = e.features?.[0];
-        if (!feature) return;
-        const bizId = feature.properties?.id;
-        const target = businessesRef.current.find((b) => b.id === bizId);
-        if (target) {
-          onSelectBusiness(target);
-
-          if (popupRef.current) {
-            popupRef.current.remove();
-          }
-
-          const coords = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
-          const popup = new maplibregl.Popup({
-            offset: 14,
-            closeButton: true,
-            closeOnClick: false,
-            className: 'radar-map-popup',
-            maxWidth: '320px',
-          })
-            .setLngLat(coords)
-            .setHTML(createPopupHTML(target))
-            .addTo(map);
-
-          popupRef.current = popup;
-        }
-      });
-
-      map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
-      map.on('mouseenter', 'unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
-    });
-
-    mapInstance.current = map;
-
-    return () => {
-      map.remove();
-      mapInstance.current = null;
-    };
+    }
+    paintRadar(map);
   }, []);
 
+  // Create the map once.
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
-    if (!map.isStyleLoaded()) return;
-
-    const source = map.getSource('businesses-source') as maplibregl.GeoJSONSource;
-    if (source) {
-      source.setData(toGeoJSON(businesses));
-    }
-  }, [businesses]);
-
-  useEffect(() => {
-    if (!mapInstance.current || !flyToCoords) return;
-    mapInstance.current.flyTo({
-      center: [flyToCoords.lng, flyToCoords.lat],
-      zoom: flyToCoords.zoom || 14.5,
-      speed: 1.4,
-      essential: true,
+    if (!container.current || mapRef.current) return;
+    const map = new maplibregl.Map({
+      container: container.current,
+      style: MAP_STYLES.paper,
+      center: HOME,
+      zoom: 12.2,
+      attributionControl: { compact: true },
     });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    let loaded = false;
+    map.on('style.load', () => {
+      loaded = true;
+      install(map);
+      setReady(true);
+    });
+    const fallback = () => {
+      if (loaded) return;
+      loaded = true;
+      map.setStyle(FALLBACK_STYLE);
+    };
+    const fallbackTimer = setTimeout(fallback, 8000);
+    map.on('error', (e) => {
+      const msg = String((e as { error?: { message?: string } }).error?.message ?? '');
+      if (!loaded && /style|fetch|Failed/i.test(msg)) fallback();
+    });
+
+    map.on('click', 'radar-clusters', async (e) => {
+      const f = e.features?.[0];
+      const src = map.getSource('radar-src') as maplibregl.GeoJSONSource | undefined;
+      if (!f || !src) return;
+      const zoom = await src.getClusterExpansionZoom(f.properties?.cluster_id);
+      map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: Math.min(zoom, 16), duration: 350 });
+    });
+    map.on('click', 'radar-point', (e) => {
+      const id = e.features?.[0]?.properties?.id;
+      const b = dataRef.current.find((x) => x.id === id);
+      if (b) selectRef.current(b);
+    });
+    // Hover label in the display serif.
+    map.on('mouseenter', 'radar-point', (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      const f = e.features?.[0];
+      if (!f) return;
+      hoverCb.current?.(String(f.properties?.id ?? '') || null);
+      hoverRef.current?.remove();
+      hoverRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'radar-hover' })
+        .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
+        .setHTML(
+          `<div style="font-family:var(--font-display),system-ui,sans-serif;font-weight:650;font-size:16px;line-height:1.15;color:rgb(var(--ink))">${escapeHTML(
+            String(f.properties?.name ?? ''),
+          )}</div><div style="font-family:var(--font-mono),monospace;font-size:11px;color:rgb(var(--walnut));margin-top:3px">${escapeHTML(
+            String(f.properties?.area ?? ''),
+          )} · ${f.properties?.lead_score}</div>`,
+        )
+        .addTo(map);
+    });
+    map.on('mouseleave', 'radar-point', () => {
+      map.getCanvas().style.cursor = '';
+      hoverRef.current?.remove();
+      hoverCb.current?.(null);
+    });
+    const reportCenter = () => {
+      const c = map.getCenter();
+      centerCb.current?.({ lat: c.lat, lng: c.lng });
+    };
+    map.on('moveend', reportCenter);
+    map.once('load', reportCenter);
+    map.on('mouseenter', 'radar-clusters', () => (map.getCanvas().style.cursor = 'pointer'));
+    map.on('mouseleave', 'radar-clusters', () => (map.getCanvas().style.cursor = ''));
+
+    // Repaint basemap + markers when the light/dark theme changes.
+    const themeObs = new MutationObserver(() => {
+      if (!map.isStyleLoaded()) return;
+      paperize(map);
+      paintRadar(map);
+    });
+    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // Keep the canvas sized when the drawer / sheet changes the layout.
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(container.current);
+
+    mapRef.current = map;
+    return () => {
+      clearTimeout(fallbackTimer);
+      themeObs.disconnect();
+      ro.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [install]);
+
+  useEffect(() => {
+    const src = mapRef.current?.getSource('radar-src') as maplibregl.GeoJSONSource | undefined;
+    src?.setData(toGeoJSON(businesses));
+  }, [businesses, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyToCoords) return;
+    map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: flyToCoords.zoom || 14.5, speed: 1.6, essential: true });
   }, [flyToCoords]);
 
   useEffect(() => {
-    if (!mapInstance.current || !selectedBusiness?.lat || !selectedBusiness?.lng) return;
-    const map = mapInstance.current;
-    map.flyTo({
-      center: [selectedBusiness.lng, selectedBusiness.lat],
-      zoom: 15.5,
-      speed: 1.4,
-    });
-
-    if (popupRef.current) {
-      popupRef.current.remove();
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    if (map.getLayer('radar-selected')) map.setFilter('radar-selected', ['==', ['get', 'id'], selectedBusiness?.id ?? '']);
+    if (selectedBusiness?.lat && selectedBusiness?.lng) {
+      map.easeTo({ center: [selectedBusiness.lng, selectedBusiness.lat], zoom: Math.max(map.getZoom(), 14.5), duration: 400 });
     }
+  }, [selectedBusiness, ready]);
 
-    const popup = new maplibregl.Popup({
-      offset: 14,
-      closeButton: true,
-      closeOnClick: false,
-      className: 'radar-map-popup',
-      maxWidth: '320px',
-    })
-      .setLngLat([selectedBusiness.lng, selectedBusiness.lat])
-      .setHTML(createPopupHTML(selectedBusiness))
-      .addTo(map);
+  // Pulse ring on the pin of the lead hovered in the list.
+  useEffect(() => {
+    const map = mapRef.current;
+    pulseRef.current?.remove();
+    pulseRef.current = null;
+    if (!map || !hoveredId) return;
+    const b = dataRef.current.find((x) => x.id === hoveredId);
+    if (!b?.lat || !b?.lng) return;
+    const el = document.createElement('div');
+    el.className = 'radar-pulse';
+    el.setAttribute('aria-hidden', 'true');
+    pulseRef.current = new maplibregl.Marker({ element: el }).setLngLat([b.lng, b.lat]).addTo(map);
+  }, [hoveredId, businesses]);
 
-    popupRef.current = popup;
-  }, [selectedBusiness]);
+  // Ripple rings where a scan is looking, for as long as it runs.
+  useEffect(() => {
+    const map = mapRef.current;
+    rippleRef.current?.remove();
+    rippleRef.current = null;
+    if (!map || !scanFocus) return;
+    const el = document.createElement('div');
+    el.className = 'radar-ripple';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<span></span><span></span><span></span><i></i>';
+    rippleRef.current = new maplibregl.Marker({ element: el }).setLngLat([scanFocus.lng, scanFocus.lat]).addTo(map);
+  }, [scanFocus]);
 
-  const handleStyleChange = (styleKey: 'positron' | 'voyager' | 'dark') => {
-    setCurrentStyle(styleKey);
-    if (!mapInstance.current) return;
-    mapInstance.current.setStyle(MAP_STYLES[styleKey]);
+  const switchStyle = (key: StyleKey) => {
+    if (key === styleKey) return;
+    setStyleKey(key);
+    mapRef.current?.setStyle(MAP_STYLES[key]);
   };
 
   return (
-    <div className="relative w-full h-full min-h-[420px] bg-clay-canvas overflow-hidden">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className={cn('absolute inset-0 bg-paper overflow-hidden', className)}>
+      <div ref={container} className="w-full h-full" aria-label="Map of discovered leads" role="region" />
 
-      {/* Floating Center "Scan Current Map View" Trigger */}
+      {/* Radar sweep: the only looping animation in the product. Off under reduced motion. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden motion-reduce:hidden">
+        <div
+          className="aspect-square w-[160%] animate-sweep opacity-60"
+          style={{ background: 'conic-gradient(from 0deg, rgb(var(--ink) / 0.07), transparent 14%, transparent)' }}
+        />
+      </div>
+
+      {/* Scan the visible area */}
       {onScanViewport && (
         <button
-          onClick={() => {
-            if (!mapInstance.current || isScanning) return;
-            const center = mapInstance.current.getCenter();
-            const zoom = mapInstance.current.getZoom();
-            const radius = Math.min(5000, Math.max(900, Math.round(40000000 / Math.pow(2, zoom + 1))));
-            onScanViewport({ lat: center.lat, lng: center.lng, radius });
-          }}
+          type="button"
+          data-tour="scan-area"
           disabled={isScanning}
-          className={`absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs shadow-lg border transition-all active:scale-95 ${
-            isScanning
-              ? 'bg-blue-600 text-white border-blue-400 shadow-blue-500/30 animate-pulse cursor-wait'
-              : 'bg-white/95 hover:bg-accent-blue text-clay-text hover:text-white border-clay-border/80 shadow-clay-card'
-          }`}
-          title="Scan newly opened physical businesses in this visible area"
+          onClick={() => {
+            const map = mapRef.current;
+            if (!map || isScanning) return;
+            const c = map.getCenter();
+            // Same radius rule as before the redesign: wider when zoomed out, 0.9–5 km.
+            const radius = Math.min(5000, Math.max(900, Math.round(40000000 / Math.pow(2, map.getZoom() + 1))));
+            onScanViewport({ lat: c.lat, lng: c.lng, radius });
+          }}
+          className="absolute top-14 md:top-3 left-1/2 z-10 center-x inline-flex items-center gap-1.5 h-10 px-3.5 rounded-ctl border border-ink bg-surface text-sm text-ink shadow-hard-sm disabled:opacity-70 disabled:cursor-wait transition-[transform] duration-150"
+          title="Look for newly opened shops in the area the map is showing"
         >
-          <Crosshair className={`w-4 h-4 text-rose-500 ${isScanning ? 'animate-spin' : ''}`} />
-          <span>{isScanning ? 'Scanning Map Corridors...' : '🎯 Scan Current Map View'}</span>
+          <Crosshair aria-hidden className="size-4 stroke-[1.5]" />
+          {isScanning ? 'Scanning this area…' : 'Scan this area'}
         </button>
       )}
 
-      {/* Clay Floating Map Style Control */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 p-1 rounded-clay bg-white/90 backdrop-blur-md shadow-clay-card border border-clay-border/80 text-xs">
-        <span className="text-clay-muted pl-2 text-[11px] font-medium flex items-center gap-1">
-          <Layers className="w-3.5 h-3.5 text-accent-blue" /> Basemap:
-        </span>
-        <button
-          onClick={() => handleStyleChange('positron')}
-          className={`px-2.5 py-1 rounded-clay-sm font-medium transition ${
-            currentStyle === 'positron'
-              ? 'bg-accent-blue text-white shadow-clay-btn'
-              : 'text-clay-muted hover:text-clay-text'
-          }`}
-        >
-          Porcelain
-        </button>
-        <button
-          onClick={() => handleStyleChange('voyager')}
-          className={`px-2.5 py-1 rounded-clay-sm font-medium transition ${
-            currentStyle === 'voyager'
-              ? 'bg-accent-blue text-white shadow-clay-btn'
-              : 'text-clay-muted hover:text-clay-text'
-          }`}
-        >
-          Street
-        </button>
-        <button
-          onClick={() => handleStyleChange('dark')}
-          className={`px-2.5 py-1 rounded-clay-sm font-medium transition ${
-            currentStyle === 'dark'
-              ? 'bg-accent-blue text-white shadow-clay-btn'
-              : 'text-clay-muted hover:text-clay-text'
-          }`}
-        >
-          Slate
-        </button>
+      {/* Basemap switch */}
+      <div role="group" aria-label="Basemap" className="absolute top-3 left-3 z-10 flex rounded-ctl border border-hairline bg-surface p-0.5 text-xs">
+        {(['paper', 'streets'] as StyleKey[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={styleKey === k}
+            onClick={() => switchStyle(k)}
+            className={cn('h-9 px-3 rounded-[4px] capitalize transition-colors', styleKey === k ? 'bg-ink text-surface' : 'text-walnut hover:text-ink')}
+          >
+            {k}
+          </button>
+        ))}
       </div>
 
-      {/* Recenter Button */}
       <button
-        onClick={() => {
-          mapInstance.current?.flyTo({ center: [78.35, 17.43], zoom: 12.4, speed: 1.2 });
-        }}
-        className="absolute bottom-5 left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-clay-text rounded-clay shadow-clay-btn border border-clay-border/80 text-xs font-medium transition active:translate-y-0.5"
+        type="button"
+        onClick={() => mapRef.current?.flyTo({ center: HOME, zoom: 12.2, speed: 1.4 })}
+        className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1.5 h-10 px-3 rounded-ctl border border-hairline bg-surface text-xs text-ink hover:border-ink"
       >
-        <Crosshair className="w-3.5 h-3.5 text-accent-blue" />
-        Reset to Hyderabad West
+        <LocateFixed aria-hidden className="size-4 stroke-[1.5]" /> Back to west Hyderabad
       </button>
 
-      {/* Clay Legend */}
-      <div className="absolute bottom-5 right-4 z-10 bg-white/95 backdrop-blur-md px-3.5 py-2.5 rounded-clay shadow-clay-card border border-clay-border/80 text-[11px] text-clay-text hidden md:block space-y-1.5">
-        <div className="font-semibold text-clay-muted text-[10px] uppercase tracking-wider pb-1 border-b border-clay-border/60">
-          Status Pipeline
+      <div className="absolute bottom-3 right-3 z-10 hidden md:block rounded-ctl border border-hairline bg-surface px-3 py-2 text-xs text-walnut space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span aria-hidden className="relative size-4 grid place-items-center">
+            <span className="absolute inset-0 rounded-full border-2 border-accent" />
+            <span className="size-2 rounded-full bg-ink" />
+          </span>
+          Score 85 or more
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent-blue shadow-sm" />
-          <span className="font-medium">New Lead</span>
+          <span aria-hidden className="size-4 grid place-items-center">
+            <span className="size-2 rounded-full bg-ink" />
+          </span>
+          Other leads
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm" />
-          <span>Contacted</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm" />
-          <span>Interested</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
-          <span>Closed Plan</span>
+          <span aria-hidden className="size-4 grid place-items-center">
+            <span className="size-2 rounded-full bg-status-closed" />
+          </span>
+          Closed or skipped
         </div>
       </div>
     </div>

@@ -1,0 +1,18 @@
+# Business Radar — design brief (warm editorial)
+
+1. **Tokens (saffron and cardamom).** Paper `#FAF6EC` page · Surface `#FFFCF4` cards · Sunk `#F0E9D8` wells/inputs · Ink `#22201A` text + dark fills · Walnut `#5B5647` secondary text (6.8:1) · Tan `#8A836F` icons only · Hairline `#DCD3BC` borders. Accent saffron: `#C9700E` for marks and rings, `#D98A1F` (`accent-fill`) for the primary button with ink text on it (`on-accent`, 5.9:1), `#8F4E05` (`accent-strong`) whenever saffron is text. Status: cardamom `#4F6B3A`/`#3E5A2B` new, turmeric `#B07D2B`/`#7A5414` contacted, brick `#A63E25` interested, stone `#9A917F`/`#6A6455` closed. Never `#000`, `#fff`, or raw Tailwind palette names in components. **Dark mode** (`[data-theme=dark]`, toggle in every header, stored in localStorage, defaults to the system setting): `#1A1712` page, `#24201A` surface, `#F3EDE0` ink, `#C2B9A4` secondary, saffron `#E89A35` with dark text on it. Same token names, so components never branch on theme.
+2. **Type.** Display: Funnel Display at 650–700, tracking −0.035em: a tight signage grotesk, so headlines read like shopfront boards rather than a magazine. UI/body: Funnel Sans (same family, text cut). Data: SUSE Mono, tabular figures. One handwritten note on the landing map in Story Script. All four are Google Fonts (OFL), self-hosted from `app/fonts`. Scale ≈1.25: 12 · 14 · 16 · 20 · 25 · 31 · 39 · 49 · 61. Body line-height 1.55, prose max 62ch. Sentence case everywhere.
+3. **Spacing.** 4px base: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 72 · 112. Sections breathe at 72–112; cards pad 16–24.
+4. **Radius.** 6px controls (`rounded-ctl`), 14px panels (`rounded-panel`). `rounded-full` only for avatars, map dots and the score dial.
+5. **Depth.** 1px hairline borders, no soft shadows. One hard shadow (`shadow-hard` = 4px 4px 0 ink) reserved for the primary button and the selected lead card.
+6. **Texture.** SVG paper grain at 3% on the page background only. The one hand-made mark on the landing page is a saffron highlighter swipe behind a phrase. No glass, glow, gradient text or blobs.
+7. **Icons.** lucide only, stroke 1.5, inline with text, never inside coloured tiles, never animated.
+8. **Motion.** 150–400ms ease-out or a damped spring, one moving thing per region, all gated by `prefers-reduced-motion` (`MotionConfig reducedMotion="user"` + CSS). Page changes use the View Transitions API (cross-fade; lead title morphs card → lead page; theme switch wipes in a circle from the toggle). Sliding indicators for tabs and the section menu, chips and toasts spring in and out. Loops only while something is actually happening: map sweep, scan ripples during a scan, hover pulse while hovered.
+9. **Components.** Button (primary/ink/ghost) · Badge (status, flag) · Card · Input · Popover · Drawer · Score (dial + rotated stamp) · Skeleton. Build pages from these, not ad-hoc classes.
+10. **Do / don't.** Do: uneven grids, real Hyderabad names and numbers, label sample data "sample", show the map. Don't: italic accent word, all-caps eyebrows over headings, numbered 01/02/03 sections, three equal cards in a row, emoji as UI, pulsing icons, "powerful/seamless/unlock".
+
+## Interaction kit
+- **Command bar** (`Ctrl/Cmd K`, any page): leads, places from `GLOBAL_MARKETS`, page actions, "Scan <typed place>".
+- **Toasts** (`useToast`): one optional action, usually Undo for status and note changes.
+- **City clock**: local time at the map centre (exact for preset cities, longitude estimate elsewhere).
+- **Tour** (`components/tour/Tour.tsx`): offered on first visit to /radar, replay from the ? button, `/radar?tour=1`, or the command bar.
