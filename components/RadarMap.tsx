@@ -54,7 +54,7 @@ const LIGHT = {
   stone: '#8C8174',
 };
 
-// Warm espresso night map: no blue-black, water is a dark sage.
+// Warm espresso night map: no cold near-black, water is a dark sage.
 const DARK: typeof LIGHT = {
   paper: '#1E1813',
   land2: '#231C16',

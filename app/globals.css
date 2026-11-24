@@ -33,7 +33,7 @@
   color-scheme: light;
 }
 
-/* Dark: warm espresso, never blue-black. Ink flips to cream, so ink-filled
+/* Dark: warm espresso, never a cold near-black. Ink flips to cream, so ink-filled
    buttons become cream buttons with espresso text. Contrast checked (AA). */
 [data-theme='dark'] {
   --paper: 30 24 19; /* #1E1813 espresso */
